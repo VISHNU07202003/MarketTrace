@@ -1,6 +1,6 @@
 # MarketTrace — Handover & Phase Log
 
-## Current State (Phase 3 Complete)
+## Current State (Phase 4 Complete)
 
 - **Workspace:** `V:\MASTER'S\MarketTrace_Antigravity_Prompt`
 - **Git Branch:** `main`
@@ -8,56 +8,51 @@
 - **Phase 1 Status:** COMPLETE (PASS)
 - **Phase 2 Status:** COMPLETE (PASS)
 - **Phase 3 Status:** COMPLETE (PASS WITH PENDING CLOUD CHECK)
+- **Phase 4 Status:** COMPLETE (PASS)
 - **Verified Capabilities:**
-  - `warehouse/schema.sql`: Versioned DDL for run manifests, raw deliveries, processing decisions, book checkpoints, analytical results, and incidents.
-  - `warehouse/load.sql` & `warehouse/teardown.sql`: Bounded stage creation, resource monitor caps, auto-suspending X-Small warehouse, COPY INTO statements, and credit safety teardown scripts.
-  - `warehouse/analytics.sql`: Analytical SQL queries for midpoints, spreads, basis-point spreads, and 11-sample sliding window rolling volatility.
-  - `warehouse/local_warehouse.py`: Offline SQLite relational warehouse validating table schemas, data loading, count matching, and SQL analytics.
-  - `warehouse/snowflake_runner.py`: Safe runner with automatic fallback to local offline warehouse when cloud credentials are not configured.
-  - Pytest suite: 9/9 tests passing in 0.36s.
+  - `depgraph/registry.py`: Typed dependency graph (`RawDelivery` → `OrderBook` → `BestQuotes` → `MidpointSpread` → `LogReturns` → `RollingVolatility`). Cycle detection and topological ordering verified.
+  - `depgraph/impact_analyzer.py`:
+    - Temporal calculation-window dependency analysis.
+    - Fault invalidation propagation: sequence gap marks exact downstream rolling volatility windows as `INCOMPLETE`.
+    - Unaffected set verification: confirms all prior windows and non-overlapping deliveries remain `VALID`.
+    - Honest recovery verification: confirms fresh snapshot restores current book and new quotes, but does NOT falsely heal older incomplete history.
+    - Controlled fixture recomputation: restores withheld event, generates topological recomputation plan, bumps revision to 2, and restores validity only for affected nodes.
+  - Pytest suite: 12/12 tests passing in 0.62s.
   - CTest suite: 2/2 tests passing in 0.07s.
 
 ---
 
 ## Verified Gate Commands & Outputs
 
-### 1. Local Warehouse Execution & Summary
+### 1. Pytest Suite (DepGraph, Warehouse & Reference)
 ```powershell
-python -m warehouse.snowflake_runner
+python -m pytest depgraph/tests/ warehouse/tests/ reference/tests/
 ```
 **Output:**
 ```
-============================================================
- MarketTrace Warehouse Experiment Runner
-============================================================
-[STATUS] No Snowflake credentials in environment.
-[FALLBACK] Running bounded local offline warehouse validation (SQLite contract).
-[LOAD] Ingested 113 deliveries and 113 decisions.
-[CHECKPOINTS] Populated 113 book checkpoints.
-[ANALYTICS] Computed and stored 339 versioned analytical results.
-
-[VERIFIED SUMMARY]
-  - Run ID: run_synth_faulted_s42
-  - Deliveries: 113
-  - Decision Breakdown: {'ACCEPTED': 106, 'DROPPED_DUPLICATE': 3, 'REJECTED_INVALID_PRICE': 1, 'REJECTED_INVALID_SIZE': 1, 'REJECTED_OUT_OF_SEQUENCE': 2}
-  - Analytics Breakdown: {'MIDPOINT': {'INCOMPLETE': 59, 'VALID': 54}, 'ROLLING_VOLATILITY': {'INCOMPLETE': 83, 'VALID': 30}, 'SPREAD': {'INCOMPLETE': 59, 'VALID': 54}}
-
-[PASS] Local warehouse verification passed with 100% offline parity.
-```
-
-### 2. Pytest Suite (Warehouse & Reference)
-```powershell
-python -m pytest warehouse/tests/ reference/tests/
-```
-**Output:**
-```
-collected 9 items
-warehouse\tests\test_warehouse.py ..                                     [ 22%]
-reference\tests\test_generator.py ..                                     [ 44%]
-reference\tests\test_oracle.py ...                                       [ 77%]
+collected 12 items
+depgraph\tests\test_depgraph.py ...                                      [ 25%]
+warehouse\tests\test_warehouse.py ..                                     [ 41%]
+reference\tests\test_generator.py ..                                     [ 58%]
+reference\tests\test_oracle.py ...                                       [ 83%]
 reference\tests\test_reference_contract.py ..                            [100%]
 
-============================== 9 passed in 0.36s ==============================
+============================= 12 passed in 0.62s ==============================
+```
+
+### 2. CTest Suite
+```powershell
+ctest --test-dir build --output-on-failure
+```
+**Output:**
+```
+Test project V:/MASTER'S/MarketTrace_Antigravity_Prompt/build
+    Start 1: EngineContractTest
+1/2 Test #1: EngineContractTest ...............   Passed    0.01 sec
+    Start 2: EngineReplayTest
+2/2 Test #2: EngineReplayTest .................   Passed    0.05 sec
+
+100% tests passed out of 2
 ```
 
 ---
@@ -65,21 +60,23 @@ reference\tests\test_reference_contract.py ..                            [100%]
 ## Second Mind Review
 
 ```text
-SECOND MIND REVIEW — phase 3, 2026-11-06, Self-Review (per mind.md protocol)
-Observed state: SQL schema, load, teardown, and analytics written; LocalWarehouse passed offline verification matching 113 deliveries, 113 decisions, and 339 versioned results; pytest passed 9/9; ctest passed 2/2.
-Gate: PASS WITH PENDING CLOUD CHECK.
-North-star fit: Delivers the versioned relational schema and SQL analytics contract needed to store historical book evidence and link downstream results to raw event deliveries.
-Mismatch or new fact: Live Snowflake credentials were not configured in the local environment. Per project.md Section 5 and mind.md adaptation rules, local SQLite offline runner fulfills the relational contract, and live cloud checks remain marked pending until budget/access is configured. Local substitute is explicitly labeled as offline emulation.
-Plan decision: KEEP. Phase 4 proceeds as planned in project.md.
-Contract effects: Table schemas (run_manifests, raw_deliveries, processing_decisions, book_checkpoints, analytical_results) frozen and populated with versioned results feeding Phase 4.
-Open verification: Bounded live Snowflake run ($400 trial budget) remains pending credentials and will be executed when credentials are provided.
-Next builder task: Phase 4: Adapt DepGraph into an explicit typed dependency registry: OrderBook -> BestQuotes -> MidpointSpread -> LogReturns -> RollingVolatility, tracking time-window intersections, selective invalidation, and recomputation planning.
+SECOND MIND REVIEW — phase 4, 2026-11-06, Self-Review (per mind.md protocol)
+Observed state: DepGraph registry and ImpactAnalyzer implemented; test_depgraph.py verified topological sort, cycle rejection, exact affected vs unaffected set isolation, honest recovery (resync restores current book without healing historical gap), and controlled recomputation (revision 2); pytest passed 12/12; ctest passed 2/2.
+Gate: PASS.
+North-star fit: Delivers the core analytical reasoning component that explains which calculation windows are corrupted by a fault, which results remain trustworthy, and what specific steps are required for historical recovery.
+Mismatch or new fact: None. Original DepGraph tool-field matching successfully adapted to temporal calculation intervals with zero code breakage to the existing DepGraph repo.
+Plan decision: KEEP. Phase 5 proceeds as planned in project.md.
+Contract effects: Dependency nodes and recomputation plans are ready to be serialized and rendered by the Phase 5 Investigation Dashboard.
+Open verification: Live Snowflake verification remains pending credentials.
+Next builder task: Phase 5: Implement the local web investigation dashboard with the 3 focused views (Run Overview, Incident Investigation, Recovery Comparison), keyboard and narrow-screen usability, and reproducible offline demo.
 ```
 
 ## Next Exact Step
-Proceed to **Phase 4: DepGraph Impact and Repair**:
-Implement `depgraph/graph.py` and `depgraph/impact_analyzer.py` to adapt Vishnu's DepGraph architecture to temporal calculation windows. The graph will model:
-- Nodes: Typed analytical stages (`RawDelivery` → `OrderBook` → `BestBidAsk` → `MidpointSpread` → `LogReturns` → `RollingVolatility`).
-- Windows: Time intervals `[t_start, t_end]`.
-- States: `VALID`, `STALE`, `INCOMPLETE`, `BLOCKED`, `RECOMPUTING`.
-- Affected vs Unaffected sets: Verifies that a sequence gap invalidates only overlapping calculation windows and does not falsely mark unrelated windows as damaged, nor falsely heal older incomplete history on a new snapshot resync.
+Proceed to **Phase 5: Investigation Dashboard**:
+Build a lightweight local browser dashboard in `app/`:
+- Fast local backend server (`app/server.js` or `app/server.py` using Python's built-in `http.server` / FastAPI / Starlette) requiring no cloud secrets.
+- 3 distinct, interactive views:
+  1. **Run Overview**: Replay progress, manifest hash, book validity badge, accepted vs rejected counts, current best bid/ask, midpoint, and spread.
+  2. **Incident Investigation**: Timeline of arrivals, raw delivery payload, C++ processing decision, failed rule, affected rolling calculation windows, and interactive DepGraph dependency path.
+  3. **Recovery Comparison**: Side-by-side comparison of clean reference, damaged state (showing unresolved gap), and controlled recovery (showing revision 2 recomputation with unchanged unaffected results).
+- Keyboard accessibility and responsive layout.
