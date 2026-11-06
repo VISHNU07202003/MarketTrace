@@ -117,6 +117,56 @@ void test_basic_book_contract() {
     auto dec7 = book.apply(bad_size);
     assert(dec7.code == DecisionCode::RejectedInvalidSize);
 
+    // Timer-based freshness & staleness check:
+    // Update at t = 2,000,000,000 ns
+    EventEnvelope good_update;
+    good_update.delivery_id = "del-008";
+    good_update.instrument = "BTC-USD";
+    good_update.message_kind = MessageKind::Update;
+    good_update.side = Side::Bid;
+    good_update.price_ticks = 6'000'000;
+    good_update.size_units = 100'000'000;
+    good_update.provider_sequence = 203;
+    good_update.receive_time_ns = 2'000'000'000;
+    auto dec8 = book.apply(good_update);
+    assert(dec8.code == DecisionCode::Accepted);
+    assert(book.state() == QualityState::Valid);
+
+    // Timer heartbeat at t = 3,000,000,000 ns (elapsed 1s <= 5s) -> stays VALID
+    EventEnvelope fresh_timer;
+    fresh_timer.delivery_id = "del-009";
+    fresh_timer.instrument = "BTC-USD";
+    fresh_timer.message_kind = MessageKind::Timer;
+    fresh_timer.receive_time_ns = 3'000'000'000;
+    auto dec9 = book.apply(fresh_timer);
+    assert(dec9.code == DecisionCode::Accepted);
+    assert(book.state() == QualityState::Valid);
+
+    // Timer heartbeat at t = 9,000,000,000 ns (elapsed 7s > 5s) -> transitions to STALE!
+    EventEnvelope stale_timer;
+    stale_timer.delivery_id = "del-010";
+    stale_timer.instrument = "BTC-USD";
+    stale_timer.message_kind = MessageKind::Timer;
+    stale_timer.receive_time_ns = 9'000'000'000;
+    auto dec10 = book.apply(stale_timer);
+    assert(dec10.code == DecisionCode::Accepted);
+    assert(dec10.resulting_book_state == QualityState::Stale);
+    assert(book.state() == QualityState::Stale);
+
+    // Fresh update arrives at t = 9_100_000_000 ns -> restores state to VALID!
+    EventEnvelope restore_update;
+    restore_update.delivery_id = "del-011";
+    restore_update.instrument = "BTC-USD";
+    restore_update.message_kind = MessageKind::Update;
+    restore_update.side = Side::Bid;
+    restore_update.price_ticks = 6'000'100;
+    restore_update.size_units = 100'000'000;
+    restore_update.provider_sequence = 204;
+    restore_update.receive_time_ns = 9'100'000'000;
+    auto dec11 = book.apply(restore_update);
+    assert(dec11.code == DecisionCode::Accepted);
+    assert(book.state() == QualityState::Valid);
+
     std::cout << "[PASS] EngineContractTest: All C++ order-book contract assertions verified successfully." << std::endl;
 }
 

@@ -41,7 +41,7 @@ def test_api_run_overview(local_server):
         assert res.status == 200
         data = json.loads(res.read().decode())
         assert data["total_events"] == 113
-        assert data["accepted_count"] == 106
+        assert data["accepted_count"] == 107
         assert data["current_book_state"] == "VALID"
 
 

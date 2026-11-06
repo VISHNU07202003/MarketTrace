@@ -19,6 +19,8 @@ struct BookMetrics {
 
 class OrderBook {
 public:
+    static constexpr int64_t FRESHNESS_TIMEOUT_NS = 5000000000LL; // 5 seconds staleness threshold
+
     explicit OrderBook(std::string instrument = "BTC-USD");
 
     void clear();

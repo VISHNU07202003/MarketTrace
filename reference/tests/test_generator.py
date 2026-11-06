@@ -26,24 +26,30 @@ def test_generator_determinism():
 
 
 def test_evaluator_manifest_isolation_and_coverage():
-    """Verify that the evaluator manifest correctly annotates all 5 planned injected faults."""
+    """Verify that the evaluator manifest correctly annotates all 8 planned injected faults."""
     gen = FixtureGenerator(seed=42)
     _, manifest = gen.generate_trace(num_updates=100, inject_faults=True)
 
     fault_types = [m["fault_type"] for m in manifest]
     assert fault_types == [
         "DUPLICATE_SEQUENCE",
+        "REORDERED_ARRIVAL",
         "INVALID_PRICE",
         "INVALID_SIZE",
+        "SIMULATED_PAUSE",
         "SEQUENCE_GAP",
+        "GRACEFUL_RESTART",
         "RESYNC_SNAPSHOT"
     ]
 
     expected_decisions = [m["expected_decision"] for m in manifest]
     assert expected_decisions == [
         DecisionCode.DROPPED_DUPLICATE.value,
+        DecisionCode.DROPPED_DUPLICATE.value,
         DecisionCode.REJECTED_INVALID_PRICE.value,
         DecisionCode.REJECTED_INVALID_SIZE.value,
+        DecisionCode.ACCEPTED.value,
+        DecisionCode.REJECTED_OUT_OF_SEQUENCE.value,
         DecisionCode.REJECTED_OUT_OF_SEQUENCE.value,
         DecisionCode.ACCEPTED.value
     ]
@@ -53,6 +59,9 @@ def test_evaluator_manifest_isolation_and_coverage():
         QualityState.VALID.value,
         QualityState.VALID.value,
         QualityState.VALID.value,
+        QualityState.VALID.value,
+        QualityState.STALE.value,
+        QualityState.INCOMPLETE.value,
         QualityState.INCOMPLETE.value,
         QualityState.VALID.value
     ]

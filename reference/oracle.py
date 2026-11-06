@@ -18,12 +18,16 @@ from reference.models import (
 
 
 class ReferenceOracle:
+    FRESHNESS_TIMEOUT_NS: int = 5_000_000_000  # 5 seconds staleness threshold
+
     def __init__(self, instrument: str = "BTC-USD"):
         self.instrument = instrument
         self.state = QualityState.VALID
         self.bids: Dict[int, int] = {}  # price_ticks -> size_units
         self.asks: Dict[int, int] = {}  # price_ticks -> size_units
         self.last_provider_sequence: Optional[int] = None
+        self.last_update_time_ns: int = 0
+        self.current_session: Optional[str] = None
         self.history_records: List[Tuple[ProcessingDecision, BookMetrics]] = []
         
         # Sampling history for rolling volatility: (timestamp_ns, midpoint_ticks)
@@ -34,6 +38,8 @@ class ReferenceOracle:
         self.asks.clear()
         self.state = QualityState.VALID
         self.last_provider_sequence = None
+        self.last_update_time_ns = 0
+        self.current_session = None
         self.sampled_midpoints.clear()
 
     def apply(self, event: EventEnvelope) -> Tuple[ProcessingDecision, BookMetrics]:
@@ -54,13 +60,24 @@ class ReferenceOracle:
         elif event.message_kind == MessageKind.UPDATE:
             dec = self._apply_update(event)
         elif event.message_kind == MessageKind.TIMER:
-            dec = ProcessingDecision(
-                delivery_id=event.delivery_id,
-                code=DecisionCode.ACCEPTED,
-                reason="Timer heartbeat accepted",
-                decision_time_ns=event.receive_time_ns,
-                resulting_book_state=self.state
-            )
+            elapsed = (event.receive_time_ns - self.last_update_time_ns) if self.last_update_time_ns > 0 else 0
+            if self.last_update_time_ns > 0 and elapsed > self.FRESHNESS_TIMEOUT_NS:
+                self.state = QualityState.STALE
+                dec = ProcessingDecision(
+                    delivery_id=event.delivery_id,
+                    code=DecisionCode.ACCEPTED,
+                    reason=f"Staleness threshold exceeded: elapsed {elapsed}ns > {self.FRESHNESS_TIMEOUT_NS}ns",
+                    decision_time_ns=event.receive_time_ns,
+                    resulting_book_state=QualityState.STALE
+                )
+            else:
+                dec = ProcessingDecision(
+                    delivery_id=event.delivery_id,
+                    code=DecisionCode.ACCEPTED,
+                    reason="Timer heartbeat evaluated; feed fresh",
+                    decision_time_ns=event.receive_time_ns,
+                    resulting_book_state=self.state
+                )
         else:
             dec = ProcessingDecision(
                 delivery_id=event.delivery_id,
@@ -82,6 +99,7 @@ class ReferenceOracle:
             self.state = QualityState.VALID
             if event.provider_sequence is not None:
                 self.last_provider_sequence = event.provider_sequence
+            self.last_update_time_ns = event.receive_time_ns
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.ACCEPTED,
@@ -130,6 +148,7 @@ class ReferenceOracle:
         if event.provider_sequence is not None:
             self.last_provider_sequence = event.provider_sequence
         self.state = QualityState.VALID
+        self.last_update_time_ns = event.receive_time_ns
 
         return ProcessingDecision(
             delivery_id=event.delivery_id,
@@ -204,6 +223,10 @@ class ReferenceOracle:
                 decision_time_ns=event.receive_time_ns,
                 resulting_book_state=self.state
             )
+
+        if self.state == QualityState.STALE:
+            self.state = QualityState.VALID
+        self.last_update_time_ns = event.receive_time_ns
 
         return ProcessingDecision(
             delivery_id=event.delivery_id,

@@ -160,3 +160,63 @@ def test_oracle_rolling_volatility_exact_math():
     corrupt_midpoints = midpoints.copy()
     corrupt_midpoints[5] = -10.0
     assert ReferenceOracle.calculate_rolling_volatility(corrupt_midpoints) is None
+
+
+def test_oracle_timer_staleness():
+    oracle = ReferenceOracle(instrument="BTC-USD")
+    
+    # 1. Update at t = 1,000,000,000 ns
+    e1 = EventEnvelope(
+        run_id="r1",
+        delivery_id="d1",
+        instrument="BTC-USD",
+        message_kind=MessageKind.UPDATE,
+        side=Side.BID,
+        price_ticks=5_000_000,
+        size_units=100_000_000,
+        provider_sequence=1,
+        receive_time_ns=1_000_000_000
+    )
+    oracle.apply(e1)
+    assert oracle.state == QualityState.VALID
+
+    # 2. Heartbeat at t = 2,000,000,000 ns (elapsed 1s <= 5s) -> stays VALID
+    t1 = EventEnvelope(
+        run_id="r1",
+        delivery_id="d2",
+        instrument="BTC-USD",
+        message_kind=MessageKind.TIMER,
+        receive_time_ns=2_000_000_000
+    )
+    dec_t1, _ = oracle.apply(t1)
+    assert dec_t1.code == DecisionCode.ACCEPTED
+    assert oracle.state == QualityState.VALID
+
+    # 3. Heartbeat at t = 8,000,000,000 ns (elapsed 7s > 5s) -> transitions to STALE!
+    t2 = EventEnvelope(
+        run_id="r1",
+        delivery_id="d3",
+        instrument="BTC-USD",
+        message_kind=MessageKind.TIMER,
+        receive_time_ns=8_000_000_000
+    )
+    dec_t2, _ = oracle.apply(t2)
+    assert dec_t2.code == DecisionCode.ACCEPTED
+    assert dec_t2.resulting_book_state == QualityState.STALE
+    assert oracle.state == QualityState.STALE
+
+    # 4. Fresh update arrives at t = 8_100_000_000 -> restores state to VALID!
+    e2 = EventEnvelope(
+        run_id="r1",
+        delivery_id="d4",
+        instrument="BTC-USD",
+        message_kind=MessageKind.UPDATE,
+        side=Side.BID,
+        price_ticks=5_000_100,
+        size_units=100_000_000,
+        provider_sequence=2,
+        receive_time_ns=8_100_000_000
+    )
+    dec_e2, _ = oracle.apply(e2)
+    assert dec_e2.code == DecisionCode.ACCEPTED
+    assert oracle.state == QualityState.VALID

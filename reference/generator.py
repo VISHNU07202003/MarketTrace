@@ -109,19 +109,24 @@ class FixtureGenerator:
         # Time step between events: 100ms
         for step in range(1, num_updates + 1):
             current_time_ns += 100_000_000  # 100ms
-            provider_seq += 1
 
             # Determine if this step is an injected fault
             fault_type = None
             if inject_faults:
                 if step == 20:
                     fault_type = "DUPLICATE_SEQUENCE"
+                elif step == 28:
+                    fault_type = "REORDERED_ARRIVAL"
                 elif step == 35:
                     fault_type = "INVALID_PRICE"
                 elif step == 50:
                     fault_type = "INVALID_SIZE"
+                elif step == 58:
+                    fault_type = "SIMULATED_PAUSE"
                 elif step == 65:
                     fault_type = "SEQUENCE_GAP"
+                elif step == 72:
+                    fault_type = "GRACEFUL_RESTART"
                 elif step == 80:
                     fault_type = "RESYNC_SNAPSHOT"
 
@@ -130,12 +135,12 @@ class FixtureGenerator:
             price = (base_bid + price_offset) if side == Side.BID else (base_ask + price_offset)
             size = rng.randint(0, 300_000_000)  # 0 indicates level removal
 
-            curr_seq = provider_seq
             del_id = next_delivery_id()
             msg_kind = MessageKind.UPDATE
+            session_id = "synth_session_01"
 
             if fault_type == "DUPLICATE_SEQUENCE":
-                curr_seq = provider_seq - 1  # Duplicate sequence from step 19
+                curr_seq = provider_seq  # Duplicate of the last sent sequence
                 evaluator_manifest.append({
                     "delivery_id": del_id,
                     "step_index": step,
@@ -145,7 +150,20 @@ class FixtureGenerator:
                     "comment": "Duplicate sequence number delivered; should be safely dropped"
                 })
 
+            elif fault_type == "REORDERED_ARRIVAL":
+                curr_seq = provider_seq - 1  # Reordered earlier sequence
+                evaluator_manifest.append({
+                    "delivery_id": del_id,
+                    "step_index": step,
+                    "fault_type": fault_type,
+                    "expected_decision": DecisionCode.DROPPED_DUPLICATE.value,
+                    "expected_book_state": QualityState.VALID.value,
+                    "comment": "Reordered arrival delivered after higher sequence was processed; rejected as stale"
+                })
+
             elif fault_type == "INVALID_PRICE":
+                provider_seq += 1
+                curr_seq = provider_seq
                 price = -50_000  # Negative price
                 evaluator_manifest.append({
                     "delivery_id": del_id,
@@ -157,6 +175,8 @@ class FixtureGenerator:
                 })
 
             elif fault_type == "INVALID_SIZE":
+                provider_seq += 1
+                curr_seq = provider_seq
                 size = -10_000_000  # Negative size
                 evaluator_manifest.append({
                     "delivery_id": del_id,
@@ -167,8 +187,25 @@ class FixtureGenerator:
                     "comment": "Negative size units; should reject update"
                 })
 
+            elif fault_type == "SIMULATED_PAUSE":
+                current_time_ns += 6_000_000_000
+                msg_kind = MessageKind.TIMER
+                side = Side.NONE
+                price = 0
+                size = 0
+                curr_seq = None
+                evaluator_manifest.append({
+                    "delivery_id": del_id,
+                    "step_index": step,
+                    "fault_type": fault_type,
+                    "expected_decision": DecisionCode.ACCEPTED.value,
+                    "expected_book_state": QualityState.STALE.value,
+                    "comment": "Simulated pause triggers staleness heartbeat check; transitions book to STALE"
+                })
+
             elif fault_type == "SEQUENCE_GAP":
-                curr_seq = provider_seq + 2  # Skip one sequence number (simulate missing update)
+                provider_seq += 2  # Skip one sequence number (simulate missing update)
+                curr_seq = provider_seq
                 evaluator_manifest.append({
                     "delivery_id": del_id,
                     "step_index": step,
@@ -178,7 +215,22 @@ class FixtureGenerator:
                     "comment": "Observable sequence gap; marks order book state as INCOMPLETE"
                 })
 
+            elif fault_type == "GRACEFUL_RESTART":
+                session_id = "synth_session_02"
+                provider_seq += 5  # Restart sequence discontinuity
+                curr_seq = provider_seq
+                evaluator_manifest.append({
+                    "delivery_id": del_id,
+                    "step_index": step,
+                    "fault_type": fault_type,
+                    "expected_decision": DecisionCode.REJECTED_OUT_OF_SEQUENCE.value,
+                    "expected_book_state": QualityState.INCOMPLETE.value,
+                    "comment": "Session restart discontinuity; remains INCOMPLETE until authoritative resync"
+                })
+
             elif fault_type == "RESYNC_SNAPSHOT":
+                provider_seq += 10
+                curr_seq = provider_seq
                 msg_kind = MessageKind.SNAPSHOT
                 side = Side.NONE
                 price = 0
@@ -192,11 +244,15 @@ class FixtureGenerator:
                     "comment": "Authoritative resync snapshot; restores current book state to VALID"
                 })
 
+            else:
+                provider_seq += 1
+                curr_seq = provider_seq
+
             event = EventEnvelope(
                 run_id=run_id,
                 delivery_id=del_id,
                 source="synthetic_fixture",
-                source_session="synth_session_01",
+                source_session=session_id,
                 instrument=self.instrument,
                 message_kind=msg_kind,
                 provider_sequence=curr_seq,
@@ -295,10 +351,55 @@ def build_and_save_fixtures(seed: int = 42, fixtures_dir: str = "fixtures"):
     with open(os.path.join(fixtures_dir, "expected_faulted_metrics.json"), "w") as f:
         json.dump(faulted_metrics, f, indent=2)
 
-    print(f"Successfully generated fixtures with seed {seed}:")
-    print(f"  - {clean_path} ({len(clean_events)} events)")
-    print(f"  - {faulted_path} ({len(faulted_events)} events)")
-    print(f"  - {manifest_path} ({len(manifest)} injected faults)")
+    # Also generate frozen holdout dataset (seed 101) per Phase 7 requirements
+    build_and_save_holdout_fixtures(seed=101, fixtures_dir=fixtures_dir)
+
+
+def build_and_save_holdout_fixtures(seed: int = 101, fixtures_dir: str = "fixtures"):
+    import os
+    os.makedirs(fixtures_dir, exist_ok=True)
+    gen = FixtureGenerator(seed=seed)
+
+    # Clean holdout
+    clean_events, _ = gen.generate_trace(num_updates=100, inject_faults=False)
+    with open(os.path.join(fixtures_dir, "holdout_clean_run.json"), "w") as f:
+        json.dump([e.model_dump() for e in clean_events], f, indent=2)
+
+    oracle_clean = ReferenceOracle()
+    clean_metrics = []
+    for ev in clean_events:
+        dec, met = oracle_clean.apply(ev)
+        clean_metrics.append({
+            "delivery_id": ev.delivery_id,
+            "decision": dec.model_dump(),
+            "metrics": met.model_dump()
+        })
+    with open(os.path.join(fixtures_dir, "expected_holdout_clean_metrics.json"), "w") as f:
+        json.dump(clean_metrics, f, indent=2)
+
+    # Faulted holdout
+    faulted_events, manifest = gen.generate_trace(num_updates=100, inject_faults=True)
+    with open(os.path.join(fixtures_dir, "holdout_faulted_run.json"), "w") as f:
+        json.dump([e.model_dump() for e in faulted_events], f, indent=2)
+
+    with open(os.path.join(fixtures_dir, "holdout_manifest.json"), "w") as f:
+        json.dump(manifest, f, indent=2)
+
+    oracle_faulted = ReferenceOracle()
+    faulted_metrics = []
+    for ev in faulted_events:
+        dec, met = oracle_faulted.apply(ev)
+        faulted_metrics.append({
+            "delivery_id": ev.delivery_id,
+            "decision": dec.model_dump(),
+            "metrics": met.model_dump()
+        })
+    with open(os.path.join(fixtures_dir, "expected_holdout_faulted_metrics.json"), "w") as f:
+        json.dump(faulted_metrics, f, indent=2)
+
+    print(f"Successfully generated frozen holdout fixtures with seed {seed}:")
+    print(f"  - fixtures/holdout_clean_run.json ({len(clean_events)} events)")
+    print(f"  - fixtures/holdout_faulted_run.json ({len(faulted_events)} events)")
 
 
 if __name__ == "__main__":

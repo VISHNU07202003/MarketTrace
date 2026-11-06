@@ -31,10 +31,19 @@ ProcessingDecision OrderBook::apply(const EventEnvelope& event) {
     } else if (event.message_kind == MessageKind::Timer) {
         ProcessingDecision dec;
         dec.delivery_id = event.delivery_id;
-        dec.code = DecisionCode::Accepted;
-        dec.reason = "Timer heartbeat evaluated";
         dec.decision_time_ns = event.receive_time_ns;
-        dec.resulting_book_state = current_state_;
+        dec.code = DecisionCode::Accepted;
+
+        int64_t elapsed = (last_update_time_ns_ > 0) ? (event.receive_time_ns - last_update_time_ns_) : 0;
+        if (last_update_time_ns_ > 0 && elapsed > FRESHNESS_TIMEOUT_NS) {
+            current_state_ = QualityState::Stale;
+            dec.reason = "Staleness threshold exceeded: elapsed " + std::to_string(elapsed) + 
+                         "ns > " + std::to_string(FRESHNESS_TIMEOUT_NS) + "ns";
+            dec.resulting_book_state = QualityState::Stale;
+        } else {
+            dec.reason = "Timer heartbeat evaluated; feed fresh";
+            dec.resulting_book_state = current_state_;
+        }
         return dec;
     }
 
@@ -98,6 +107,7 @@ ProcessingDecision OrderBook::apply_snapshot(const EventEnvelope& event) {
     if (event.provider_sequence.has_value()) {
         last_provider_sequence_ = event.provider_sequence;
     }
+    last_update_time_ns_ = event.receive_time_ns;
     current_state_ = QualityState::Valid;
     dec.code = DecisionCode::Accepted;
     dec.reason = "Snapshot level applied";
@@ -178,6 +188,9 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
 
     if (event.provider_sequence.has_value()) {
         last_provider_sequence_ = event.provider_sequence;
+    }
+    if (current_state_ == QualityState::Stale) {
+        current_state_ = QualityState::Valid;
     }
     last_update_time_ns_ = event.receive_time_ns;
 

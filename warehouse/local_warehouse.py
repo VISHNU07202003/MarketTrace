@@ -94,6 +94,42 @@ class LocalWarehouse:
         """)
         self.conn.commit()
 
+    def record_run_manifest(
+        self,
+        run_id: str,
+        seed: int,
+        input_file: str,
+        fault_manifest_file: Optional[str] = None,
+        calculation_version: str = "v1.0",
+        status: str = "VALIDATED"
+    ) -> Dict[str, Any]:
+        """Validates file checksums and registers an immutable run manifest."""
+        import hashlib
+        with open(input_file, "rb") as f:
+            input_hash = hashlib.sha256(f.read()).hexdigest()
+        
+        fault_hash = None
+        if fault_manifest_file and os.path.exists(fault_manifest_file):
+            with open(fault_manifest_file, "rb") as f:
+                fault_hash = hashlib.sha256(f.read()).hexdigest()
+
+        cur = self.conn.cursor()
+        cur.execute("""
+        INSERT OR REPLACE INTO run_manifests (
+            run_id, seed, input_hash, fault_manifest_hash, calculation_version, status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (run_id, seed, input_hash, fault_hash, calculation_version, status))
+        self.conn.commit()
+
+        return {
+            "run_id": run_id,
+            "seed": seed,
+            "input_hash": input_hash,
+            "fault_manifest_hash": fault_hash,
+            "calculation_version": calculation_version,
+            "status": status
+        }
+
     def load_evidence(self, deliveries_jsonl_path: str, decisions_jsonl_path: str) -> Dict[str, int]:
         """Loads append-only evidence files into raw_deliveries and processing_decisions."""
         cur = self.conn.cursor()

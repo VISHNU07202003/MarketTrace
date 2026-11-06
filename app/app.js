@@ -132,12 +132,18 @@ async function inspectDelivery(deliveryId) {
     const ev = data.event || {};
     const dec = data.decision || {};
     const chain = data.depgraph_chain || [];
+    const snap = data.nearest_snapshot;
+    const classification = data.source_classification || "NORMAL_DELIVERY";
+    const injected = data.injected_fault_info;
 
     let chainHtml = chain.map(node => `
       <div class="flow-node ${node.status === 'VALID' ? 'state-valid' : 'state-incomplete'}">
         <div>
-          <div class="node-title">${node.stage}</div>
+          <div class="node-title">${node.stage} <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">[${node.units}]</span></div>
           <div class="node-desc">${node.desc}</div>
+          <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 3px; font-family: var(--font-mono);">
+            Window: [${node.time_window ? node.time_window[0] : 0}, ${node.time_window ? node.time_window[1] : 0}] ns
+          </div>
         </div>
         <div>
           <span class="badge ${node.status === 'VALID' ? 'badge-parity' : 'badge-synthetic'}">${node.status}</span>
@@ -145,14 +151,33 @@ async function inspectDelivery(deliveryId) {
       </div>
     `).join("");
 
+    let snapshotNotice = snap ? `
+      <div style="margin-top: 6px; padding: 6px 10px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; font-size: 0.8rem;">
+        <strong>Nearest Known-Good Snapshot Anchor:</strong> ${snap.delivery_id} (Seq: ${snap.provider_sequence ?? 'N/A'}, Time: ${snap.receive_time_ns} ns)
+      </div>
+    ` : "";
+
+    let faultNotice = injected ? `
+      <div style="margin-top: 6px; padding: 6px 10px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; font-size: 0.8rem;">
+        <strong>Injected Fault Scenario:</strong> ${injected.fault_type} — <em>${injected.comment}</em>
+      </div>
+    ` : "";
+
     contentEl.innerHTML = `
       <div class="inspector-section">
-        <h4>Delivery Identification</h4>
+        <h4>Delivery Identification & Provenance</h4>
         <div style="font-family: var(--font-mono); font-size: 0.9rem; margin-bottom: 8px;">
           <strong>ID:</strong> ${data.delivery_id} | 
           <strong>Kind:</strong> ${ev.message_kind} | 
-          <strong>Sequence:</strong> ${ev.provider_sequence ?? 'N/A'}
+          <strong>Sequence:</strong> ${ev.provider_sequence ?? 'N/A'} |
+          <span class="badge ${classification === 'SYNTHETIC_FAULT_INJECTION' ? 'badge-synthetic' : 'badge-engine'}">${classification}</span>
         </div>
+        <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">
+          <div><strong>Source Receive Time:</strong> ${ev.receive_time_ns} ns</div>
+          <div><strong>Engine Replay Time:</strong> ${ev.replay_time_ns} ns</div>
+        </div>
+        ${faultNotice}
+        ${snapshotNotice}
       </div>
 
       <div class="inspector-section">

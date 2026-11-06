@@ -57,6 +57,28 @@ void test_faulted_replay_parity() {
     std::cout << "[PASS] Exported append-only evidence: fixtures/deliveries.jsonl and fixtures/decisions.jsonl" << std::endl;
 }
 
+void test_holdout_replay_parity() {
+    ReplayEngine engine("BTC-USD");
+    auto events = ReplayEngine::load_events_from_json("fixtures/holdout_faulted_run.json");
+    assert(events.size() == 113);
+
+    auto records = engine.replay(events);
+    assert(records.size() == 113);
+
+    std::string failure_reason;
+    bool match = ReplayEngine::verify_parity_with_reference(
+        records,
+        "fixtures/expected_holdout_faulted_metrics.json",
+        failure_reason
+    );
+
+    if (!match) {
+        std::cerr << "[FAIL] Holdout replay parity check failed: " << failure_reason << std::endl;
+        assert(false);
+    }
+    std::cout << "[PASS] Holdout replay parity verified bit-for-bit with Python oracle (seed 101, 113/113 events)." << std::endl;
+}
+
 void test_determinism_and_benchmarks() {
     ReplayEngine engine("BTC-USD");
     auto events = ReplayEngine::load_events_from_json("fixtures/clean_run.json");
@@ -87,6 +109,7 @@ int main() {
     try {
         test_clean_replay_parity();
         test_faulted_replay_parity();
+        test_holdout_replay_parity();
         test_determinism_and_benchmarks();
         return 0;
     } catch (const std::exception& ex) {

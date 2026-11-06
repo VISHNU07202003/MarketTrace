@@ -24,7 +24,7 @@ warehouse = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "reference/tests", "depgraph/tests"]
+testpaths = ["reference/tests", "depgraph/tests", "warehouse/tests", "app/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

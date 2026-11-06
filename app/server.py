@@ -93,6 +93,8 @@ class MarketTraceHandler(http.server.SimpleHTTPRequestHandler):
                         "size_units": ev.get("size_units", 0),
                         "provider_sequence": ev.get("provider_sequence"),
                         "receive_time_ns": ev.get("receive_time_ns", 0),
+                        "replay_time_ns": ev.get("replay_time_ns", 0),
+                        "provider_time_ns": ev.get("provider_time_ns"),
                         "decision_code": met["decision"]["code"],
                         "decision_reason": met["decision"]["reason"],
                         "resulting_book_state": met["decision"]["resulting_book_state"],
@@ -108,18 +110,44 @@ class MarketTraceHandler(http.server.SimpleHTTPRequestHandler):
                     events = json.load(f)
                 with open("fixtures/expected_faulted_metrics.json", "r") as f:
                     metrics = json.load(f)
+                with open("fixtures/evaluator_manifest.json", "r") as f:
+                    evaluator_manifest = json.load(f)
 
-                event = next((e for e in events if e["delivery_id"] == delivery_id), None)
-                record = next((m for m in metrics if m["delivery_id"] == delivery_id), None)
+                event_idx = next((i for i, e in enumerate(events) if e["delivery_id"] == delivery_id), None)
+                event = events[event_idx] if event_idx is not None else None
+                record = metrics[event_idx] if event_idx is not None else None
 
-                # Build DepGraph path
+                # Find nearest preceding snapshot
+                nearest_snapshot = None
+                if event_idx is not None:
+                    for i in range(event_idx - 1, -1, -1):
+                        if events[i]["message_kind"] == "SNAPSHOT":
+                            nearest_snapshot = {
+                                "delivery_id": events[i]["delivery_id"],
+                                "receive_time_ns": events[i].get("receive_time_ns", 0),
+                                "provider_sequence": events[i].get("provider_sequence"),
+                                "side": events[i].get("side", "NONE")
+                            }
+                            break
+
+                # Check if this incident was an injected fault
+                injected_info = next((m for m in evaluator_manifest if m["delivery_id"] == delivery_id), None)
+                source_classification = "SYNTHETIC_FAULT_INJECTION" if injected_info else (
+                    "OBSERVABLE_SOURCE_GAP" if record and record["decision"]["code"] != "ACCEPTED" else "NORMAL_DELIVERY"
+                )
+
+                # Time window for volatility (10 steps before this event to this event)
+                ts = event.get("receive_time_ns", 0) if event else 0
+                win_start = ts - 1_000_000_000 if ts > 0 else 0
+
+                # Build DepGraph path with explicit time windows and units
                 depgraph_chain = [
-                    {"stage": "RAW_DELIVERY", "node_id": f"raw_{delivery_id}", "status": "VALID", "desc": "Raw event delivery arrival"},
-                    {"stage": "ORDER_BOOK", "node_id": f"book_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Order book state after delivery"},
-                    {"stage": "BEST_QUOTES", "node_id": f"quotes_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Extracted best bid/ask quotes"},
-                    {"stage": "MIDPOINT_SPREAD", "node_id": f"mid_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Calculated midpoint and spread"},
-                    {"stage": "LOG_RETURNS", "node_id": f"ret_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Log return observation"},
-                    {"stage": "ROLLING_VOLATILITY", "node_id": f"vol_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "11-sample sliding window"}
+                    {"stage": "RAW_DELIVERY", "node_id": f"raw_{delivery_id}", "status": "VALID", "desc": "Raw event delivery arrival", "time_window": [ts, ts], "units": "wire envelope"},
+                    {"stage": "ORDER_BOOK", "node_id": f"book_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Order book state after delivery", "time_window": [ts, ts], "units": "price ticks / size units"},
+                    {"stage": "BEST_QUOTES", "node_id": f"quotes_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Extracted best bid/ask quotes", "time_window": [ts, ts], "units": "ticks ($0.01)"},
+                    {"stage": "MIDPOINT_SPREAD", "node_id": f"mid_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Calculated midpoint and spread", "time_window": [ts, ts], "units": "ticks ($0.01)"},
+                    {"stage": "LOG_RETURNS", "node_id": f"ret_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "Log return observation", "time_window": [ts - 100_000_000, ts], "units": "dimensionless ratio"},
+                    {"stage": "ROLLING_VOLATILITY", "node_id": f"vol_{delivery_id}", "status": record["decision"]["resulting_book_state"] if record else "VALID", "desc": "11-sample sliding window", "time_window": [win_start, ts], "units": "sample stddev"}
                 ]
 
                 response_data = {
@@ -127,6 +155,9 @@ class MarketTraceHandler(http.server.SimpleHTTPRequestHandler):
                     "event": event,
                     "decision": record["decision"] if record else None,
                     "metrics": record["metrics"] if record else None,
+                    "nearest_snapshot": nearest_snapshot,
+                    "source_classification": source_classification,
+                    "injected_fault_info": injected_info,
                     "depgraph_chain": depgraph_chain
                 }
 
