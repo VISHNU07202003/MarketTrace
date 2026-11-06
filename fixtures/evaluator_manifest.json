@@ -1,0 +1,42 @@
+[
+  {
+    "delivery_id": "del_0031",
+    "step_index": 20,
+    "fault_type": "DUPLICATE_SEQUENCE",
+    "expected_decision": "DROPPED_DUPLICATE",
+    "expected_book_state": "VALID",
+    "comment": "Duplicate sequence number delivered; should be safely dropped"
+  },
+  {
+    "delivery_id": "del_0046",
+    "step_index": 35,
+    "fault_type": "INVALID_PRICE",
+    "expected_decision": "REJECTED_INVALID_PRICE",
+    "expected_book_state": "VALID",
+    "comment": "Nonpositive price ticks; should reject update"
+  },
+  {
+    "delivery_id": "del_0061",
+    "step_index": 50,
+    "fault_type": "INVALID_SIZE",
+    "expected_decision": "REJECTED_INVALID_SIZE",
+    "expected_book_state": "VALID",
+    "comment": "Negative size units; should reject update"
+  },
+  {
+    "delivery_id": "del_0076",
+    "step_index": 65,
+    "fault_type": "SEQUENCE_GAP",
+    "expected_decision": "REJECTED_OUT_OF_SEQUENCE",
+    "expected_book_state": "INCOMPLETE",
+    "comment": "Observable sequence gap; marks order book state as INCOMPLETE"
+  },
+  {
+    "delivery_id": "del_0091",
+    "step_index": 80,
+    "fault_type": "RESYNC_SNAPSHOT",
+    "expected_decision": "ACCEPTED",
+    "expected_book_state": "VALID",
+    "comment": "Authoritative resync snapshot; restores current book state to VALID"
+  }
+]
