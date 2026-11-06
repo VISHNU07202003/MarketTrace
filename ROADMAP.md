@@ -10,7 +10,7 @@ This roadmap tracks the verified progression across project phases. Each phase r
 | **Phase 3** | Snowflake Experiment Warehouse | **COMPLETE (PASS WITH PENDING CLOUD CHECK)** | Versioned schema (DDL), staged batch loaders, SQL historical metrics (midpoint, spread, volatility), local SQLite emulator passing 100% offline. Live cloud check pending credentials. |
 | **Phase 4** | DepGraph Impact & Repair | **COMPLETE (PASS)** | Typed temporal dependency registry, affected vs unaffected window tracking, topological recomputation plan, honest recovery verification. |
 | **Phase 5** | Investigation Dashboard | **COMPLETE (PASS)** | 3 focused views (Run Overview, Incident Investigation, Recovery Comparison), keyboard and responsive navigation, credential-free local web server (5/5 tests passing). |
-| **Phase 6** | Optional Live Adapter | Optional | Bounded Coinbase Exchange L2 capture seam documented with explicit unknown-gap handling. |
-| **Phase 7** | Evaluation & Case Study | **IN PROGRESS** | Benchmark measurements, reproducibility check, before/after case study in README. |
-| **Phase 8** | Antigravity Handoff | Planned | End-to-end clean checkout test pass, complete documentation, packaging for Codex audit. |
-| **Phase 9** | Codex Final Review | Planned | Independent verification, code/UX polish, publication to target repository. |
+| **Phase 6** | Optional Live Adapter | **COMPLETE (SEAM DOCUMENTED)** | Bounded Coinbase Exchange L2 capture seam documented with explicit unknown-gap handling in `docs/coinbase_adapter_seam.md`. |
+| **Phase 7** | Evaluation & Case Study | **COMPLETE (PASS)** | Benchmark measurements (~1.6M events/sec, <100ns p50), before/after case study in `README.md`, full evaluation report in `docs/evaluation.md`. |
+| **Phase 8** | Antigravity Handoff | **COMPLETE (PASS)** | End-to-end clean checkout test pass (19/19 passing), complete documentation (ARCHITECTURE, DECISIONS, CHANGELOG, CI), packaging for Codex audit. |
+| **Phase 9** | Codex Final Review | **READY TO PROCEED** | Independent verification, code/UX polish, publication to target repository. |

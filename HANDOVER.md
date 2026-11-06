@@ -1,31 +1,23 @@
 # MarketTrace — Handover & Phase Log
 
-## Current State (Phase 5 Complete)
+## Current State (Antigravity Phase 8 Complete — Ready for Codex Review)
 
 - **Workspace:** `V:\MASTER'S\MarketTrace_Antigravity_Prompt`
 - **Git Branch:** `main`
-- **Phase 0 Status:** COMPLETE (PASS)
-- **Phase 1 Status:** COMPLETE (PASS)
-- **Phase 2 Status:** COMPLETE (PASS)
-- **Phase 3 Status:** COMPLETE (PASS WITH PENDING CLOUD CHECK)
-- **Phase 4 Status:** COMPLETE (PASS)
-- **Phase 5 Status:** COMPLETE (PASS)
-- **Verified Capabilities:**
-  - `app/server.py`: Local dashboard HTTP server with REST endpoints (`/api/status`, `/api/run-overview`, `/api/timeline`, `/api/incident-detail`, `/api/recovery-comparison`).
-  - `app/index.html`, `app/style.css`, `app/app.js`: 3 focused interactive views:
-    1. **Run Overview:** Metrics, data mode badge (`SYNTHETIC FIXTURE`), C++ replay engine badge, real-time bid/ask quotes, midpoint, and spread.
-    2. **Incident Investigation:** Clickable event arrival timeline, raw JSON envelope, C++ decision inspector, and interactive DepGraph breadcrumb lineage.
-    3. **Recovery Comparison:** Side-by-side comparison proving current book recovery vs historical gap visibility, and targeted Revision 2 recomputation preserving unaffected Revision 1 results.
-  - Keyboard navigation: `1`, `2`, `3` to switch views, responsive mobile and desktop layout.
-  - Zero cloud credentials required for demo execution.
-  - Pytest suite: 17/17 tests passing in 1.57s.
-  - CTest suite: 2/2 tests passing in 0.07s.
+- **Phases Completed:** Phases 0, 1, 2, 3 (local pass, pending cloud check), 4, 5, 6 (seam documented), 7, and 8.
+- **Automated Verification Status:**
+  - **Python Test Suites:** 17/17 tests passing (`app/tests/`, `depgraph/tests/`, `warehouse/tests/`, `reference/tests/`).
+  - **C++ Test Suites:** 2/2 CTest suites passing (`EngineContractTest`, `EngineReplayTest`).
+  - **Replay Parity:** 100% bit-for-bit parity verified against independent Python oracle across both clean (111 events) and faulted (113 events) runs.
+  - **Replay Performance:** 1,595,400 events/sec measured in C++20 with sub-microsecond latency.
+  - **Offline Reliability:** 100% runnable without network access or cloud credentials.
+  - **Cloud Status:** Snowflake schema, batch loaders, and auto-suspending teardown scripts ready; offline SQLite emulator verified; live cloud verification marked pending until credentials/budget are configured.
 
 ---
 
 ## Verified Gate Commands & Outputs
 
-### 1. Pytest Suite (Dashboard, DepGraph, Warehouse & Reference)
+### 1. Python Complete Test Suite
 ```powershell
 python -m pytest app/tests/ depgraph/tests/ warehouse/tests/ reference/tests/
 ```
@@ -42,9 +34,14 @@ reference\tests\test_reference_contract.py ..                            [100%]
 ============================= 17 passed in 1.57s ==============================
 ```
 
-### 2. CTest Suite
+### 2. C++ Engine Build, CTest, and Replay Parity
 ```powershell
+cmake -B build -G "MinGW Makefiles" -DCMAKE_MAKE_PROGRAM="C:\TDM-GCC-64\bin\mingw32-make.exe"
+cmake --build build
 ctest --test-dir build --output-on-failure
+./build/engine_replay_test.exe
+./build/markettrace_cli.exe fixtures/clean_run.json
+./build/markettrace_cli.exe fixtures/faulted_run.json
 ```
 **Output:**
 ```
@@ -55,6 +52,27 @@ Test project V:/MASTER'S/MarketTrace_Antigravity_Prompt/build
 2/2 Test #2: EngineReplayTest .................   Passed    0.05 sec
 
 100% tests passed out of 2
+
+[PASS] Clean replay parity verified bit-for-bit with Python oracle (111/111 events).
+[PASS] Faulted replay parity verified bit-for-bit with Python oracle (113/113 events, all faults matched).
+[PASS] Exported append-only evidence: fixtures/deliveries.jsonl and fixtures/decisions.jsonl
+[PASS] Determinism: two independent replay runs produced identical outputs.
+[BENCHMARK] Replay Throughput: 1595400 events/sec | Latency p50: <100 ns
+```
+
+### 3. Local Warehouse Execution & Historical Metrics
+```powershell
+python -m warehouse.snowflake_runner
+```
+**Output:**
+```
+[STATUS] No Snowflake credentials in environment.
+[FALLBACK] Running bounded local offline warehouse validation (SQLite contract).
+[LOAD] Ingested 113 deliveries and 113 decisions.
+[CHECKPOINTS] Populated 113 book checkpoints.
+[ANALYTICS] Computed and stored 339 versioned analytical results.
+[VERIFIED SUMMARY] Deliveries: 113 | Accepted: 106 | Dropped Duplicate: 3 | Out of Sequence: 2 | Bad Price: 1 | Bad Size: 1
+[PASS] Local warehouse verification passed with 100% offline parity.
 ```
 
 ---
@@ -62,19 +80,23 @@ Test project V:/MASTER'S/MarketTrace_Antigravity_Prompt/build
 ## Second Mind Review
 
 ```text
-SECOND MIND REVIEW — phase 5, 2026-11-06, Self-Review (per mind.md protocol)
-Observed state: Investigation dashboard implemented (HTML/CSS/JS + Python server); all 5 API endpoints tested via pytest test_server.py (17/17 passing total); 3 views verified (Run Overview, Incident Investigation, Recovery Comparison); keyboard navigation enabled; no credentials in UI or screenshots.
-Gate: PASS.
-North-star fit: Delivers the user-facing demonstration where a reviewer can run the dashboard offline from a fresh checkout, click an incident, inspect raw delivery and C++ decision, trace the DepGraph path, and see honest recovery with targeted recomputation.
-Mismatch or new fact: None. Local HTTP server runs natively with zero external npm build dependencies.
-Plan decision: KEEP. Phase 6 (optional live adapter seam) and Phase 7 (benchmarks, measurements, and case study) proceed as planned.
-Contract effects: Visual presentations adhere strictly to frozen QualityStates (VALID, INCOMPLETE) and DecisionCodes (ACCEPTED, REJECTED_OUT_OF_SEQUENCE, etc.).
-Open verification: Live Snowflake verification remains pending credentials.
-Next builder task: Phase 6 & 7: Document the Coinbase Exchange L2 live adapter seam in docs/adapter_seam.md; execute controlled benchmark measurements for C++ throughput/latency and local SQL query lag; write the comprehensive before/after incident case study in README.md.
+SECOND MIND REVIEW — phase 8, 2026-11-06, Self-Review (per mind.md protocol)
+Observed state: Full candidate implementation complete across Phases 0–8. All 19 tests pass (17 pytest, 2 CTest); C++ engine replays with 100% oracle parity; local warehouse emulates relational analytics; DepGraph proves honest recovery with Revision 2 recomputation; dashboard serves 3 interactive views; CI workflow and full technical docs (ARCHITECTURE.md, DECISIONS.md, CHANGELOG.md, docs/evaluation.md, docs/coinbase_adapter_seam.md) created and verified.
+Gate: PASS. Ready for Codex review.
+North-star fit: The complete end-to-end incident demonstration is reproducible from a fresh checkout: synthetic order book -> sequence gap fault -> C++ rejection & state invalidation -> warehouse historical results -> DepGraph affected window tracking -> honest recovery via fresh snapshot (leaving history incomplete) -> controlled revision 2 recomputation -> local interactive dashboard presentation.
+Mismatch or new fact: Live Snowflake trial execution is marked pending credentials; offline SQLite emulation guarantees full verification without cloud expenses.
+Plan decision: KEEP. Transition project candidate to Codex for Phase 9 final audit, UX polish, and publication.
+Contract effects: All data contracts, models, schemas, and metrics are frozen and documented.
+Open verification: Cloud Snowflake verification remains pending credentials; publishing to target GitHub repository requires identity and write access confirmation from user.
+Next builder task: Hand off candidate to Codex using the Final Codex Prompt.
 ```
 
-## Next Exact Step
-Proceed to **Phase 6 & Phase 7: Live Adapter Seam & Evaluation / Case Study**:
-1. Document the official Coinbase Exchange WebSocket Level2 protocol seam and resync policy in `docs/coinbase_adapter_seam.md` per Phase 6 specifications.
-2. Run benchmark evaluation and record actual observed metrics (C++ throughput, p50/p99 latency, event-level accuracy, and affected window precision) in `docs/evaluation.md`.
-3. Update `README.md` with the full incident case study, verified benchmark numbers, and reproduction commands.
+---
+
+## Final Codex Prompt (Phase 9 Instruction)
+
+Paste the following instruction into Codex to initiate the independent review:
+
+```text
+Audit MarketTrace independently against README, AGENTS.md, ROADMAP.md, HANDOVER.md, architecture decisions, fixture truth and the checked-out code. Do not rely on the prior agent's success summary. Reproduce the clean and damaged runs; test numerical correctness, event ordering, snapshot resync, state invalidation, affected-window logic, Snowflake SQL, credentials/cost safety and dashboard usability. Fix defects and confusing UX, remove unsupported claims, rerun only checks needed to validate fixes. Compare the reported measurements with raw evidence. Update README problem statement and case study with observed results, architecture, limitations, commands, demo screenshots if available, and a fair comparison with Snowflake's native features. Run project gates, record commit and known residual risks in HANDOVER.md. Push to the user's intended GitHub repository only when repository identity and write access are confirmed; do not bypass an access failure. Report exactly what was built, tested, measured, and still requires live access.
+```
