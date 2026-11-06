@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketTrace — Order-Book Replay & Incident Verification</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1>MarketTrace</h1>
+      <span class="sub-title">Order-Book Incident Replay & Dependency Verification</span>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-synthetic" id="badge-data">SYNTHETIC FIXTURE</span>
+      <span class="badge badge-engine">C++20 REPLAY CORE</span>
+      <span class="badge badge-parity">PARITY: 100% VERIFIED</span>
+    </div>
+  </header>
+
+  <nav class="nav-tabs" role="tablist">
+    <button class="tab-btn active" id="tab-overview" role="tab" aria-selected="true" onclick="switchView('overview')">
+      <span class="key-hint">1</span> Run Overview
+    </button>
+    <button class="tab-btn" id="tab-incident" role="tab" aria-selected="false" onclick="switchView('incident')">
+      <span class="key-hint">2</span> Incident Investigation
+    </button>
+    <button class="tab-btn" id="tab-recovery" role="tab" aria-selected="false" onclick="switchView('recovery')">
+      <span class="key-hint">3</span> Recovery Comparison
+    </button>
+  </nav>
+
+  <main class="main-content">
+    <!-- VIEW 1: RUN OVERVIEW -->
+    <section id="view-overview" class="view-panel active">
+      <div class="panel-header">
+        <h2>Run Overview & Current Market State</h2>
+        <div class="controls">
+          <label for="run-select">Dataset:</label>
+          <select id="run-select" onchange="loadRunOverview(this.value)">
+            <option value="faulted" selected>Faulted Incident Run (s42)</option>
+            <option value="clean">Clean Reference Run (s42)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Book State</div>
+          <div class="metric-value status-badge" id="metric-state">VALID</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Events</div>
+          <div class="metric-value" id="metric-total">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Accepted / Rejected</div>
+          <div class="metric-value" id="metric-counts">-- / --</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Best Bid (USD)</div>
+          <div class="metric-value" id="metric-bid">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Best Ask (USD)</div>
+          <div class="metric-value" id="metric-ask">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Midpoint (USD)</div>
+          <div class="metric-value" id="metric-mid">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Spread (Ticks / USD)</div>
+          <div class="metric-value" id="metric-spread">--</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h3>Architecture & Data Provenance</h3>
+        <p>
+          This dashboard presents an offline, credential-free execution of the MarketTrace BTC-USD replay pipeline.
+          The immediate order book is maintained in <strong>C++20</strong>, producing bit-for-bit parity with the 
+          <strong>Python Reference Oracle</strong>. Historical evidence is ingested into a versioned relational schema 
+          and analyzed via the <strong>DepGraph</strong> temporal dependency registry.
+        </p>
+      </div>
+    </section>
+
+    <!-- VIEW 2: INCIDENT INVESTIGATION -->
+    <section id="view-incident" class="view-panel">
+      <div class="panel-header">
+        <h2>Incident Investigation & DepGraph Cascade</h2>
+        <span class="hint">Click any timeline arrival to inspect delivery envelope and dependency lineage</span>
+      </div>
+
+      <div class="incident-layout">
+        <!-- Timeline column -->
+        <div class="timeline-container">
+          <h3>Event Arrival Stream</h3>
+          <div class="timeline-list" id="timeline-list">
+            <!-- Timeline items populated via JS -->
+          </div>
+        </div>
+
+        <!-- Inspector column -->
+        <div class="inspector-container">
+          <h3>Arrival Inspector & DepGraph Lineage</h3>
+          <div id="inspector-content">
+            <p class="placeholder-text">Select an event from the timeline to investigate.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: RECOVERY COMPARISON -->
+    <section id="view-recovery" class="view-panel">
+      <div class="panel-header">
+        <h2>Honest Recovery & Targeted Recomputation Comparison</h2>
+      </div>
+
+      <div class="thesis-box">
+        <h3>The Core Reliability Thesis</h3>
+        <p>
+          <strong>1. Current Book vs Historical Metrics:</strong> A fresh authoritative snapshot restores the 
+          <em>current</em> book state, but does <em>not</em> heal historical calculation windows.
+        </p>
+        <p>
+          <strong>2. Targeted Recomputation:</strong> In a controlled replay where the withheld historical event is restored, 
+          <strong>DepGraph</strong> plans recomputation <em>only</em> for the affected downstream windows (producing <strong>Revision 2</strong>), 
+          while completely preserving unaffected prior results in <strong>Revision 1</strong>.
+        </p>
+      </div>
+
+      <div class="table-container">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Delivery ID</th>
+              <th>Clean Oracle</th>
+              <th>Damaged State</th>
+              <th>Recovered State</th>
+              <th>Revision</th>
+              <th>Affected?</th>
+              <th>Explanation</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-tbody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>MarketTrace Portfolio Project — Vishnu Sai Padyala</span>
+    <span>Use keys <kbd>1</kbd>, <kbd>2</kbd>, <kbd>3</kbd> to toggle views</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -9,8 +9,8 @@ This roadmap tracks the verified progression across project phases. Each phase r
 | **Phase 2** | C++ Engine & Replay | **COMPLETE (PASS)** | C++20 normalized parser, order book, deterministic replay from JSON fixture, decision logging, 100% bit-for-bit oracle parity, ~1.6M events/sec. |
 | **Phase 3** | Snowflake Experiment Warehouse | **COMPLETE (PASS WITH PENDING CLOUD CHECK)** | Versioned schema (DDL), staged batch loaders, SQL historical metrics (midpoint, spread, volatility), local SQLite emulator passing 100% offline. Live cloud check pending credentials. |
 | **Phase 4** | DepGraph Impact & Repair | **COMPLETE (PASS)** | Typed temporal dependency registry, affected vs unaffected window tracking, topological recomputation plan, honest recovery verification. |
-| **Phase 5** | Investigation Dashboard | **IN PROGRESS** | 3 focused views (Run Overview, Incident Investigation, Recovery Comparison), credential-free local run. |
-| **Phase 6** | Optional Live Adapter | Optional | Bounded Coinbase Exchange L2 capture with explicit gap handling. |
-| **Phase 7** | Evaluation & Case Study | Planned | Benchmark measurements, reproducibility check, before/after case study in README. |
+| **Phase 5** | Investigation Dashboard | **COMPLETE (PASS)** | 3 focused views (Run Overview, Incident Investigation, Recovery Comparison), keyboard and responsive navigation, credential-free local web server (5/5 tests passing). |
+| **Phase 6** | Optional Live Adapter | Optional | Bounded Coinbase Exchange L2 capture seam documented with explicit unknown-gap handling. |
+| **Phase 7** | Evaluation & Case Study | **IN PROGRESS** | Benchmark measurements, reproducibility check, before/after case study in README. |
 | **Phase 8** | Antigravity Handoff | Planned | End-to-end clean checkout test pass, complete documentation, packaging for Codex audit. |
 | **Phase 9** | Codex Final Review | Planned | Independent verification, code/UX polish, publication to target repository. |
