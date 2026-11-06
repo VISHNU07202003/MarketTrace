@@ -1,0 +1,18 @@
+{
+  "name": "markettrace-dashboard",
+  "version": "0.1.0",
+  "description": "MarketTrace Investigation and Recovery Dashboard",
+  "private": true,
+  "scripts": {
+    "start": "node app/server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "market-data",
+    "order-book",
+    "incident-investigation",
+    "depgraph"
+  ],
+  "author": "Vishnu Sai Padyala",
+  "license": "UNLICENSED"
+}

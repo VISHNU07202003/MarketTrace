@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "markettrace"
+version = "0.1.0"
+description = "MarketTrace: Order-book fault replay, historical impact analysis, and recovery tracking"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pytest>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "flake8>=7.0.0",
+    "mypy>=1.0.0",
+]
+warehouse = [
+    "snowflake-connector-python>=3.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "reference/tests", "depgraph/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
