@@ -12,12 +12,15 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/engine/include)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/engine/include
+)
 
 # Core engine library
 add_library(markettrace_engine
     engine/src/envelope.cpp
     engine/src/order_book.cpp
+    engine/src/replay.cpp
 )
 
 # Main executable / CLI entry point
@@ -28,8 +31,17 @@ target_link_libraries(markettrace_cli PRIVATE markettrace_engine)
 
 # Tests
 enable_testing()
+
 add_executable(engine_contract_test
     engine/tests/test_contract.cpp
 )
 target_link_libraries(engine_contract_test PRIVATE markettrace_engine)
 add_test(NAME EngineContractTest COMMAND engine_contract_test)
+set_tests_properties(EngineContractTest PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(engine_replay_test
+    engine/tests/test_replay.cpp
+)
+target_link_libraries(engine_replay_test PRIVATE markettrace_engine)
+add_test(NAME EngineReplayTest COMMAND engine_replay_test)
+set_tests_properties(EngineReplayTest PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
