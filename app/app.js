@@ -1,12 +1,14 @@
 // MarketTrace Dashboard Application Logic
 
-let currentRunType = "faulted";
+let currentRunType = "damaged";
 let selectedDeliveryId = null;
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[ch]));
 
 document.addEventListener("DOMContentLoaded", () => {
   initKeyboardNavigation();
-  loadRunOverview("faulted");
-  loadTimeline("faulted");
+  loadRunOverview("damaged");
   loadRecoveryComparison();
 });
 
@@ -28,6 +30,10 @@ function switchView(viewName) {
 
   if (targetTab && targetPanel) {
     targetTab.classList.add("active");
+    targetTab.setAttribute("aria-selected", "true");
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      if (btn !== targetTab) btn.setAttribute("aria-selected", "false");
+    });
     targetPanel.classList.add("active");
   }
 }
@@ -37,6 +43,10 @@ async function loadRunOverview(type) {
   try {
     const res = await fetch(`/api/run-overview?type=${type}`);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Overview unavailable");
+
+    document.getElementById("badge-source").textContent = data.record_source;
+    loadTimeline(type);
 
     const stateEl = document.getElementById("metric-state");
     stateEl.textContent = data.current_book_state;
@@ -46,21 +56,21 @@ async function loadRunOverview(type) {
     document.getElementById("metric-total").textContent = data.total_events;
     document.getElementById("metric-counts").textContent = `${data.accepted_count} / ${data.rejected_count}`;
     
-    document.getElementById("metric-bid").textContent = data.best_bid_ticks 
+    document.getElementById("metric-bid").textContent = data.current_book_state === "VALID" && data.best_bid_ticks !== null
       ? `$${(data.best_bid_ticks / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}` 
       : "EMPTY";
 
-    document.getElementById("metric-ask").textContent = data.best_ask_ticks 
+    document.getElementById("metric-ask").textContent = data.current_book_state === "VALID" && data.best_ask_ticks !== null
       ? `$${(data.best_ask_ticks / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}` 
       : "EMPTY";
 
-    document.getElementById("metric-mid").textContent = data.midpoint_ticks 
-      ? `$${(data.midpoint_ticks / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}` 
-      : "EMPTY";
+    document.getElementById("metric-mid").textContent = data.current_book_state === "VALID" && data.midpoint_half_ticks !== null
+      ? `$${(data.midpoint_half_ticks / 200).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`
+      : "WITHHELD";
 
-    document.getElementById("metric-spread").textContent = data.spread_ticks 
+    document.getElementById("metric-spread").textContent = data.current_book_state === "VALID" && data.spread_ticks !== null
       ? `${data.spread_ticks} ticks ($${(data.spread_ticks / 100).toFixed(2)})` 
-      : "EMPTY";
+      : "WITHHELD";
 
   } catch (err) {
     console.error("Error loading run overview:", err);
@@ -75,10 +85,11 @@ async function loadTimeline(type) {
     listEl.innerHTML = "";
 
     data.timeline.forEach((item, idx) => {
-      const div = document.createElement("div");
+      const div = document.createElement("button");
+      div.type = "button";
       div.className = "timeline-item";
       
-      const isFault = item.decision_code !== "ACCEPTED";
+      const isFault = item.decision_code !== "ACCEPTED" || item.resulting_book_state === "INCOMPLETE";
       const isResync = item.message_kind === "SNAPSHOT" && idx > 10;
 
       if (isFault) div.classList.add("fault");
@@ -90,11 +101,11 @@ async function loadTimeline(type) {
 
       div.innerHTML = `
         <div>
-          <span class="item-id">${item.delivery_id}</span>
-          <span style="color: var(--text-secondary); margin-left: 6px;">${item.side} ${item.message_kind}</span>
+          <span class="item-id">${escapeHtml(item.delivery_id)}</span>
+          <span style="color: var(--text-secondary); margin-left: 6px;">${escapeHtml(item.side)} ${escapeHtml(item.message_kind)}</span>
         </div>
         <div>
-          <span class="item-tag ${tagClass}">${item.decision_code}</span>
+          <span class="item-tag ${tagClass}">${escapeHtml(item.decision_code)}</span>
         </div>
       `;
 
@@ -108,8 +119,10 @@ async function loadTimeline(type) {
     });
 
     // Auto-select first fault or first item
-    const faultItem = data.timeline.find(i => i.decision_code === "REJECTED_OUT_OF_SEQUENCE");
+    const faultItem = data.timeline.find(i => i.delivery_id === "inc_0061");
     if (faultItem) {
+      const element = [...listEl.children].find(el => el.querySelector(".item-id")?.textContent === faultItem.delivery_id);
+      element?.classList.add("selected");
       inspectDelivery(faultItem.delivery_id);
     } else if (data.timeline.length > 0) {
       inspectDelivery(data.timeline[0].delivery_id);
@@ -126,8 +139,9 @@ async function inspectDelivery(deliveryId) {
   contentEl.innerHTML = "<p>Loading inspector data...</p>";
 
   try {
-    const res = await fetch(`/api/incident-detail?delivery_id=${deliveryId}`);
+    const res = await fetch(`/api/incident-detail?type=${encodeURIComponent(currentRunType)}&delivery_id=${encodeURIComponent(deliveryId)}`);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Incident unavailable");
 
     const ev = data.event || {};
     const dec = data.decision || {};
@@ -139,27 +153,27 @@ async function inspectDelivery(deliveryId) {
     let chainHtml = chain.map(node => `
       <div class="flow-node ${node.status === 'VALID' ? 'state-valid' : 'state-incomplete'}">
         <div>
-          <div class="node-title">${node.stage} <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">[${node.units}]</span></div>
-          <div class="node-desc">${node.desc}</div>
+          <div class="node-title">${escapeHtml(node.stage)} <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">[${escapeHtml(node.units)}]</span></div>
+          <div class="node-desc">${escapeHtml(node.desc)}</div>
           <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 3px; font-family: var(--font-mono);">
             Window: [${node.time_window ? node.time_window[0] : 0}, ${node.time_window ? node.time_window[1] : 0}] ns
           </div>
         </div>
         <div>
-          <span class="badge ${node.status === 'VALID' ? 'badge-parity' : 'badge-synthetic'}">${node.status}</span>
+          <span class="badge ${node.status === 'VALID' ? 'badge-parity' : 'badge-synthetic'}">${escapeHtml(node.status)}</span>
         </div>
       </div>
     `).join("");
 
     let snapshotNotice = snap ? `
       <div style="margin-top: 6px; padding: 6px 10px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; font-size: 0.8rem;">
-        <strong>Nearest Known-Good Snapshot Anchor:</strong> ${snap.delivery_id} (Seq: ${snap.provider_sequence ?? 'N/A'}, Time: ${snap.receive_time_ns} ns)
+        <strong>Nearest Known-Good Snapshot Anchor:</strong> ${escapeHtml(snap.delivery_id)} (Seq: ${escapeHtml(snap.provider_sequence ?? 'N/A')}, Time: ${escapeHtml(snap.receive_time_ns)} ns)
       </div>
     ` : "";
 
     let faultNotice = injected ? `
       <div style="margin-top: 6px; padding: 6px 10px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; font-size: 0.8rem;">
-        <strong>Injected Fault Scenario:</strong> ${injected.fault_type} — <em>${injected.comment}</em>
+        <strong>Injected Fault Scenario:</strong> ${escapeHtml(injected.fault_type)} — <em>${escapeHtml(injected.comment)}</em>
       </div>
     ` : "";
 
@@ -167,10 +181,10 @@ async function inspectDelivery(deliveryId) {
       <div class="inspector-section">
         <h4>Delivery Identification & Provenance</h4>
         <div style="font-family: var(--font-mono); font-size: 0.9rem; margin-bottom: 8px;">
-          <strong>ID:</strong> ${data.delivery_id} | 
-          <strong>Kind:</strong> ${ev.message_kind} | 
-          <strong>Sequence:</strong> ${ev.provider_sequence ?? 'N/A'} |
-          <span class="badge ${classification === 'SYNTHETIC_FAULT_INJECTION' ? 'badge-synthetic' : 'badge-engine'}">${classification}</span>
+          <strong>ID:</strong> ${escapeHtml(data.delivery_id)} |
+          <strong>Kind:</strong> ${escapeHtml(ev.message_kind)} |
+          <strong>Sequence:</strong> ${escapeHtml(ev.provider_sequence ?? 'N/A')} |
+          <span class="badge ${classification === 'SYNTHETIC_FAULT_INJECTION' ? 'badge-synthetic' : 'badge-engine'}">${escapeHtml(classification)}</span>
         </div>
         <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">
           <div><strong>Source Receive Time:</strong> ${ev.receive_time_ns} ns</div>
@@ -181,17 +195,22 @@ async function inspectDelivery(deliveryId) {
       </div>
 
       <div class="inspector-section">
-        <h4>C++ Engine Decision & Quality State</h4>
-        <pre class="code-block">${JSON.stringify(dec, null, 2)}</pre>
+        <h4>${escapeHtml(data.record_source)} Decision & Quality State</h4>
+        <pre class="code-block">${escapeHtml(JSON.stringify(dec, null, 2))}</pre>
       </div>
 
       <div class="inspector-section">
         <h4>Raw Event Envelope Payload</h4>
-        <pre class="code-block">${JSON.stringify(ev, null, 2)}</pre>
+        <pre class="code-block">${escapeHtml(JSON.stringify(ev, null, 2))}</pre>
       </div>
 
       <div class="inspector-section">
-        <h4>DepGraph Invalidation Lineage</h4>
+        <h4>Local 11-sample volatility</h4>
+        <p>${escapeHtml(data.volatility_result?.status ?? "NO UPDATE SAMPLE")}: ${data.volatility_result?.numeric_value == null ? "withheld" : Number(data.volatility_result.numeric_value).toExponential(5)}</p>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Typed DepGraph dependency path</h4>
         <div class="flow-chain">
           ${chainHtml}
         </div>
@@ -199,7 +218,7 @@ async function inspectDelivery(deliveryId) {
     `;
 
   } catch (err) {
-    contentEl.innerHTML = `<p style="color: var(--accent-red);">Error loading inspector details: ${err.message}</p>`;
+    contentEl.innerHTML = `<p style="color: var(--accent-red);">Error loading inspector details: ${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -213,18 +232,16 @@ async function loadRecoveryComparison() {
     data.comparison.forEach(row => {
       const tr = document.createElement("tr");
 
-      const cleanMid = row.clean_midpoint ? `$${(row.clean_midpoint / 100).toFixed(2)}` : "--";
-      const damMid = row.damaged_midpoint ? `$${(row.damaged_midpoint / 100).toFixed(2)}` : "--";
-      const recMid = row.recovered_midpoint ? `$${(row.recovered_midpoint / 100).toFixed(2)}` : "--";
+      const fmt = value => value === null ? "—" : value.toExponential(4);
 
       tr.innerHTML = `
-        <td style="font-family: var(--font-mono); font-weight: 600;">${row.delivery_id}</td>
-        <td><span class="item-tag tag-accepted">${row.clean_status}</span> ${cleanMid}</td>
-        <td><span class="item-tag ${row.damaged_status === 'VALID' ? 'tag-accepted' : 'tag-rejected'}">${row.damaged_status}</span> ${damMid}</td>
-        <td><span class="item-tag tag-accepted">${row.recovered_status}</span> ${recMid}</td>
-        <td><span class="badge-rev">Rev ${row.revision}</span></td>
+        <td style="font-family: var(--font-mono); font-weight: 600;">${escapeHtml(row.delivery_id)}</td>
+        <td><span class="item-tag tag-accepted">${row.clean_status}</span> ${fmt(row.clean_value)}</td>
+        <td><span class="item-tag ${row.damaged_status === 'VALID' ? 'tag-accepted' : 'tag-rejected'}">${row.damaged_status}</span> ${fmt(row.damaged_value)}</td>
+        <td><span class="item-tag tag-accepted">${row.recovered_status}</span> ${fmt(row.recovered_value)}</td>
+        <td title="Synthetic event time">[${row.window_start_ns}, ${row.window_end_ns}]</td>
         <td>${row.is_affected ? '<span style="color: var(--accent-red); font-weight: 600;">YES (Recovered)</span>' : '<span style="color: var(--accent-green);">NO (Preserved)</span>'}</td>
-        <td style="color: var(--text-secondary); font-size: 0.8rem;">${row.explanation}</td>
+        <td style="color: var(--text-secondary); font-size: 0.8rem;">${escapeHtml(row.explanation)}</td>
       `;
 
       tbody.appendChild(tr);

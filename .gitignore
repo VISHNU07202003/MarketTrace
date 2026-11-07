@@ -7,9 +7,12 @@
 credentials.json
 
 # C++ build artifacts
+runs/
 build/
 bin/
 out/
+*.zip
+2.0/
 *.o
 *.obj
 *.exe

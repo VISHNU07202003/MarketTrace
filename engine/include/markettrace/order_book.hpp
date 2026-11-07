@@ -11,7 +11,8 @@ namespace markettrace {
 struct BookMetrics {
     std::optional<int64_t> best_bid_ticks;
     std::optional<int64_t> best_ask_ticks;
-    std::optional<int64_t> midpoint_ticks;     // (best_bid + best_ask) / 2
+    std::optional<int64_t> midpoint_ticks;     // legacy floor tick, kept for fixture compatibility
+    std::optional<int64_t> midpoint_half_ticks; // exact midpoint in half-tick units: bid + ask
     std::optional<int64_t> spread_ticks;       // best_ask - best_bid
     bool is_crossed{false};
     bool is_empty{true};
@@ -39,7 +40,7 @@ public:
 
 private:
     std::string instrument_;
-    QualityState current_state_{QualityState::Valid};
+    QualityState current_state_{QualityState::Incomplete};
     
     // Bids sorted descending (highest first)
     std::map<int64_t, int64_t, std::greater<int64_t>> bids_;

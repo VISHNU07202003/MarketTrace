@@ -44,5 +44,6 @@ jobs:
 
     - name: Run CLI Replay Demonstration
       run: |
-        ./build/markettrace_cli fixtures/clean_run.json
-        ./build/markettrace_cli fixtures/faulted_run.json
+        ./build/markettrace_cli fixtures/incident_damaged.json --output runs/incident_damaged_engine.json
+        python -m warehouse.snowflake_runner
+        node --check app/app.js

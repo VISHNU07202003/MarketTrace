@@ -92,7 +92,7 @@ class DependencyGraph:
             curr = queue.pop(0)
             sorted_nodes.append(curr)
 
-            for neighbor in self.adjacency[curr]:
+            for neighbor in sorted(self.adjacency[curr]):
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)

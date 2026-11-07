@@ -1,133 +1,51 @@
 # MarketTrace
 
-[![C++20](https://img.shields.io/badge/C%2B%2B-C%2B%2B20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![Parity](https://img.shields.io/badge/Parity-100%25%20Verified-brightgreen.svg)]()
-[![License](https://img.shields.io/badge/License-Unlicensed-lightgrey.svg)](LICENSE)
+A reproducible, **synthetic** BTC-USD order-book incident study. It asks a practical question: when a market update disappears, which current quotes and historical calculations can we still trust?
 
-> A deterministic BTC-USD order-book fault replay and impact verification system. When an incoming market-data stream is interrupted or corrupted, MarketTrace reconstructs trustworthy state and identifies precisely which downstream analytics require recalculation.
+## Problem and case study
 
----
+An order-book stream advances by sequence number. If update `inc_0060` disappears and `inc_0061` arrives, a consumer that simply continues may report plausible but unsupported prices and rolling risk measures. A later snapshot can establish a usable **current** book; it does not recreate the missing history.
 
-## The Problem
+The fixture holds back one generated update at second 60. The C++ replay rejects the next update and labels the book `INCOMPLETE` until a synthetic snapshot reset plus bid and ask rebuild it at second 80. Historical 11-sample volatility windows remain incomplete through that gap; after 11 uninterrupted valid one-second update samples, a new window at second 91 becomes valid. A separate controlled branch puts the exact withheld event back into its original position and recalculates its results. For example:
 
-Market-data pipelines are vulnerable to network packet drops, sequence gaps, corrupted prices, and duplicate arrivals. In quantitative systems, an unnoticed data gap can silently corrupt downstream rolling metrics (such as midpoints, spreads, and rolling volatilities).
+| Window ending | Complete branch | Damaged branch | Repaired branch |
+|---|---|---|---|
+| `inc_0059` | VALID | VALID | VALID |
+| `inc_0060` | VALID | MISSING | VALID |
+| `inc_0061` | VALID | INCOMPLETE | VALID |
+| `inc_0079` | VALID | INCOMPLETE | VALID |
+| `inc_0081` | INCOMPLETE (new sample window) | INCOMPLETE | INCOMPLETE |
+| `inc_0091` | VALID | VALID | VALID |
 
-Standard systems often either silently forward-fill bad data or discard state entirely. **MarketTrace** explores a disciplined alternative:
-1. Detect corruptions or gaps immediately using sequence and boundary validation rules.
-2. Maintain explicit state validity (`VALID`, `STALE`, `INCOMPLETE`, `BLOCKED`).
-3. Differentiate between restoring the *current* book state (via a fresh authoritative snapshot) versus repairing *historical* calculation windows (which remain incomplete unless the missing historical evidence is independently restored).
-4. Trace downstream analytical dependencies using an adapted dependency graph to selectively recompute only the affected calculation windows.
+The displayed volatility is the sample standard deviation of **10 log returns from 11 one-second midpoint observations**, with no forward filling. It is not a trading signal. Midpoints retain half-tick precision; one price tick is $0.01 in this fixture. This is a controlled synthetic demonstration, not proof about exchange feeds or a production order book.
 
----
+## Components and provenance
 
-## Case Study: The BTC-USD Sequence Gap Incident
+- `reference/`: Python oracle and deterministic generators, including the retained event and clean/damaged/repaired incident fixtures. The holdout varies seed and prices, but uses the same fault schedule; it is not a new scenario family.
+- `engine/`: C++20 sequence checks, book state, snapshots, replay decisions, and JSON output. Rejection of malformed or missing updates blocks incremental updates until a complete snapshot. C++ and Python agree on the checked fixture decisions and metrics; common specification errors remain possible.
+- `warehouse/`: SQLite stores evidence, engine/reference checkpoints, and locally computed midpoint, spread, and rolling volatility. Checkpoints are replay outputs, so comparing SQLite midpoints with those same inputs does **not** independently validate book reconstruction. A separate formula check validates selected volatility windows. The Snowflake SQL files are **unverified drafts**; the cloud runner explicitly stops if credentials are present rather than claiming a cloud run.
+- `depgraph/`: typed, temporal dependency graph adapted from the idea of [Vishnu's DepGraph](https://github.com/VISHNU07202003/DepGraph). It explains impact and produces a topological recomputation **plan**. Persisted revision-2 results and a measured minimal-cost recomputation are not implemented.
+- `app/`: local dashboard for run overview, event/decision/lineage inspection, and calculated branch comparison. It labels whether displayed replay records came from the C++ CLI or the Python reference; SQLite calculations are always local.
 
-```
-[Delivery #75]  VALID UPDATE  (seq: 164) ---> Book: VALID       ---> Metrics: VALID (Rev 1)
-[Delivery #76]  SEQUENCE GAP  (seq: 167) ---> Book: INCOMPLETE  ---> Window [65-75]: INCOMPLETE
-[Delivery #80]  FRESH SNAPSHOT(seq: 200) ---> Book: VALID (curr)---> Window [65-75]: STILL INCOMPLETE
-                                                                ---> Window [80-90]: VALID
-                                         [Controlled Fixture Recovery]
-[Restoration]   SUPPLY SEQ 165/166       ---> DepGraph Plan     ---> Window [65-75]: VALID (Rev 2)
-                                                                ---> Prior Windows: UNTOUCHED (Rev 1)
-```
+## Run it locally
 
-### What Happened:
-1. **The Gap:** At delivery `del_0076`, sequence number 167 arrived when 165 was expected. The C++ engine immediately classified the update as `REJECTED_OUT_OF_SEQUENCE` and marked the order book state as `INCOMPLETE`.
-2. **The Impact:** DepGraph cascaded invalidation to all downstream metrics overlapping `del_0076`: the midpoint calculation, log returns, and 11-sample rolling volatility windows were marked `INCOMPLETE`. Unaffected earlier windows (`del_0001` to `del_0070`) remained 100% `VALID`.
-3. **The Snapshot:** At delivery `del_0080`, a fresh snapshot arrived. It restored the *current* book state to `VALID` for new incoming quotes. However, older rolling volatility windows spanning the gap **remained incomplete** — proving that a snapshot restores current quote state, but does not magically heal historical gaps.
-4. **Controlled Recovery:** In a separate controlled branch where the missing historical event was supplied, DepGraph generated a minimal topological recomputation plan. Only the affected windows were recalculated and bumped to **Revision 2**, while all unaffected prior results remained untouched at **Revision 1**.
+Prerequisites: Python 3.10+, a C++20 compiler, and CMake 3.20+ for the standard build. From the repository root:
 
----
-
-## Architecture Overview
-
-```mermaid
-flowchart LR
-    A["Synthetic Fixture\n(BTC-USD Order Book)"] --> B["C++20 Replay Engine"]
-    B --> C["Snowflake Warehouse\n(Historical Analytics)"]
-    B --> D["DepGraph\n(Impact Analysis)"]
-    C --> D
-    D --> E["Investigation Dashboard"]
-    F["Python Reference Oracle"] -.->|"100% Bit-for-Bit Parity"| B
-    F -.->|"100% Bit-for-Bit Parity"| C
-```
-
-### Components
-
-- **C++20 Replay Engine (`engine/`)**: High-performance, integer-scaled order book maintaining bid/ask levels, sequence tracking, and decision logging (~1.6M events/sec).
-- **Python Reference Oracle (`reference/`)**: Independent reference model and deterministic test fixture generator for bit-for-bit parity testing.
-- **Relational Analytical Warehouse (`warehouse/`)**: Batch storage and SQL analytics for historical midpoint, spread, and rolling volatility metrics with full offline SQLite emulation.
-- **DepGraph (`depgraph/`)**: Adapted from Vishnu Padyala's [DepGraph project](https://github.com/VISHNU07202003/DepGraph), extended with temporal calculation windows and selective recomputation planning.
-- **Investigation Dashboard (`app/`)**: Three interactive views (Run Overview, Incident Investigation, Recovery Comparison).
-
----
-
-## Performance & Verification Benchmarks
-
-| Metric | Measured Value | Measurement Details |
-|---|---|---|
-| **C++ Replay Throughput** | **1,595,400 events/sec** | Measured across 100 warm iterations of 111 events |
-| **C++ Event Latency (p50)** | **< 100 ns** | In-memory book level insertion & validation |
-| **Parity with Python Reference** | **100% (Bit-for-Bit)** | 111/111 clean events and 113/113 faulted events identical |
-| **Fault Detection Recall** | **100% (5/5 faults)** | Duplicate, bad price, bad size, sequence gap, snapshot resync |
-| **False Invalidations** | **0** | All unaffected prior calculation windows preserved |
-| **Automated Test Coverage** | **19/19 tests passing** | 17 pytest tests + 2 CTest C++ test suites |
-
----
-
-## Quickstart & Reproducing the Demo
-
-### Prerequisites
-- C++20 compiler (`g++ 10+`, `clang 11+`, or `MSVC 2019+`)
-- CMake 3.20+
-- Python 3.10+
-
-### 1. Build and Run C++ Engine Tests
-```powershell
-# Configure CMake
-cmake -B build -G "MinGW Makefiles"
-
-# Build all targets
+```sh
+python -m pip install -e .
+python -m pytest -q
+cmake -S . -B build
 cmake --build build
-
-# Run C++ contract and replay parity tests
 ctest --test-dir build --output-on-failure
-
-# Run CLI replay on clean and faulted fixtures
-./build/markettrace_cli.exe fixtures/clean_run.json
-./build/markettrace_cli.exe fixtures/faulted_run.json
+./build/markettrace_cli fixtures/incident_damaged.json --output runs/incident_damaged_engine.json
+python -m warehouse.snowflake_runner
+python -m app.server
 ```
 
-### 2. Run Python Test Suites
-```powershell
-python -m pytest app/tests/ depgraph/tests/ warehouse/tests/ reference/tests/
-```
+Open `http://127.0.0.1:8080`. Without CLI-generated `runs/` output, the dashboard labels and uses the bundled Python reference records. The runner refuses stale engine output that differs from the reference fixture. On Windows, the CLI binary may have an `.exe` suffix. Do not set Snowflake credentials for this offline demo.
 
-### 3. Launch Local Investigation Dashboard
-```powershell
-python app/server.py
-```
-Open **`http://localhost:8080`** in your browser:
-- **Run Overview:** View current book depth, best bid/ask, midpoint, and spread.
-- **Incident Investigation:** Click on any delivery in the timeline to inspect raw JSON payloads, C++ decisions, and the DepGraph breadcrumb path.
-- **Recovery Comparison:** Compare Clean Reference vs Damaged State vs Controlled Recovery (Revision 2).
-- Keyboard shortcuts: Press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd> to toggle views.
+To regenerate fixtures (this changes the checked-in expected files), run `python -m reference.generator` and `python -m reference.incident`, then rebuild and rerun the tests. See [CODEX_PHASE9_AUDIT.md](CODEX_PHASE9_AUDIT.md) for this review's exact environment, test commands, findings, and remaining gates.
 
----
+## What this demonstrates and what remains
 
-## Relationship to DepGraph
-
-This project builds on the concept of dependency graph reasoning introduced in Vishnu Padyala's [DepGraph repository](https://github.com/VISHNU07202003/DepGraph) (commit `b89b347`, Litmus assessment). While the original DepGraph inferred static schema-level producer-to-consumer field linkages from tool catalogs, MarketTrace adapts this paradigm to dynamic, temporal market data:
-- Nodes represent typed analytical stages (`RawDelivery` → `OrderBook` → `BestQuotes` → `MidpointSpread` → `LogReturns` → `RollingVolatility`).
-- Edges represent temporal dependency windows `[t_start, t_end]`.
-- Invalidation cascades flag only the precise time windows affected by missing or rejected deliveries.
-
----
-
-## Non-Goals & Honest Boundaries
-
-- **Not an HFT or trading execution engine:** MarketTrace does not submit live broker orders, claim microsecond hardware acceleration, or promise alpha generation.
-- **Honest recovery:** Fresh snapshots restore current quote validity, but historical gaps remain `INCOMPLETE` unless authentic historical data is replayed.
-- **Offline first:** All core functionality runs 100% offline without credentials or external cloud dependencies.
+The useful engineering idea is an **explainable fault investigation across event processing, data quality, historical windows, and UI**. This is a credible small portfolio project when presented as an offline prototype. It is not a novel market-data algorithm, a trading engine, an FPGA project, a benchmarked low-latency product, or a verified Snowflake integration. Snowflake ingestion, a real feed adapter, independent scenario-family holdouts, durable revisioned recomputation, and a credible large-sample performance study remain future work. No hiring outcome or superiority over Snowflake's native tooling is implied.

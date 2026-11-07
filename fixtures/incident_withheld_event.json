@@ -1,0 +1,17 @@
+{
+  "run_id": "run_incident_clean_s303",
+  "delivery_id": "inc_0060",
+  "source": "synthetic_fixture",
+  "source_session": "incident_session_01",
+  "instrument": "BTC-USD",
+  "message_kind": "UPDATE",
+  "provider_event_id": null,
+  "provider_sequence": 160,
+  "provider_time_ns": 1700100060000000000,
+  "receive_time_ns": 1700100060000000000,
+  "replay_time_ns": 1700100060000000000,
+  "side": "BID",
+  "price_ticks": 6000060,
+  "size_units": 100000000,
+  "payload_hash": "cab8992e719e9ccd"
+}

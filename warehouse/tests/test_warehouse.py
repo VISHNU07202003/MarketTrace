@@ -1,134 +1,102 @@
-import pytest
-import os
+"""Offline incident analytics contract; no Snowflake run is claimed here."""
+
+import json
 import math
+import sqlite3
+
+import pytest
+
+from app.data import analytical_rows, load_branch
+from reference.oracle import ReferenceOracle
 from warehouse.local_warehouse import LocalWarehouse
-from warehouse.snowflake_runner import check_snowflake_credentials, run_bounded_experiment
+from warehouse.snowflake_runner import run_bounded_experiment
 
 
-def test_warehouse_ingestion_and_checks():
-    wh = LocalWarehouse()
-    
-    # Ingest append-only evidence files
-    counts = wh.load_evidence("fixtures/deliveries.jsonl", "fixtures/decisions.jsonl")
-    assert counts["deliveries"] == 113
-    assert counts["decisions"] == 113
-
-    run_id = "run_synth_faulted_s42"
-    
-    # Populate checkpoints
-    chk_count = wh.populate_checkpoints_from_metrics(run_id, "fixtures/expected_faulted_metrics.json")
-    assert chk_count == 113
-
-    # Compute analytical results
-    res_count = wh.compute_analytical_results(run_id)
-    # 113 midpoints + 113 spreads + 113 volatility windows = 339 results
-    assert res_count == 339
-
-    summary = wh.get_run_summary(run_id)
-    assert summary["total_deliveries"] == 113
-    assert summary["decisions"]["ACCEPTED"] == 107
-    assert summary["decisions"]["DROPPED_DUPLICATE"] == 2
-    assert summary["decisions"]["REJECTED_OUT_OF_SEQUENCE"] == 2
-    assert summary["decisions"]["REJECTED_INVALID_PRICE"] == 1
-    assert summary["decisions"]["REJECTED_INVALID_SIZE"] == 1
-
-    # Check that analytical results distinguish VALID from INCOMPLETE
-    vol_summary = summary["results_summary"]["ROLLING_VOLATILITY"]
-    assert "VALID" in vol_summary
-    assert "INCOMPLETE" in vol_summary
-    assert vol_summary["INCOMPLETE"] > 0
-    assert vol_summary["VALID"] > 0
+def incident_warehouse(tmp_path, branch="damaged"):
+    events, records, _ = load_branch(branch)
+    deliveries = tmp_path / "deliveries.jsonl"
+    decisions = tmp_path / "decisions.jsonl"
+    replay = tmp_path / "replay.json"
+    deliveries.write_text("".join(json.dumps(e) + "\n" for e in events))
+    decisions.write_text("".join(json.dumps(r["decision"]) + "\n" for r in records))
+    replay.write_text(json.dumps(records))
+    warehouse = LocalWarehouse()
+    counts = warehouse.load_evidence(str(deliveries), str(decisions))
+    run_id = events[0]["run_id"]
+    assert warehouse.populate_checkpoints_from_metrics(run_id, str(replay)) == len(events)
+    return warehouse, run_id, counts, events, records, replay
 
 
-def test_warehouse_manifest_and_file_checksums():
-    wh = LocalWarehouse()
-    manifest = wh.record_run_manifest(
-        run_id="run_synth_faulted_s42",
-        seed=42,
-        input_file="fixtures/faulted_run.json",
-        fault_manifest_file="fixtures/evaluator_manifest.json",
-        calculation_version="v1.0",
-        status="VALIDATED"
-    )
-    assert manifest["run_id"] == "run_synth_faulted_s42"
-    assert manifest["seed"] == 42
-    assert len(manifest["input_hash"]) == 64  # SHA-256
-    assert len(manifest["fault_manifest_hash"]) == 64
-    assert manifest["status"] == "VALIDATED"
+def result(warehouse, delivery_id, metric):
+    row = warehouse.conn.execute(
+        "SELECT * FROM analytical_results WHERE result_id = ?",
+        (f"res_{metric}_{delivery_id}",),
+    ).fetchone()
+    return dict(row) if row else None
 
 
-def test_warehouse_oracle_numerical_tolerance():
-    """
-    Phase 3 Pass Condition:
-    Verify that SQL-computed midpoints, spreads, and rolling volatilities
-    agree with independent Python reference oracle within declared tolerance.
-    """
-    import json
-    from reference.oracle import ReferenceOracle
+def test_gap_stays_incomplete_until_real_snapshot_and_new_window(tmp_path):
+    wh, run_id, counts, events, records, _ = incident_warehouse(tmp_path)
+    assert counts == {"deliveries": 104, "decisions": 104}
+    assert wh.compute_analytical_results(run_id) == 306
+    assert result(wh, "inc_0059", "vol")["status"] == "VALID"
+    assert result(wh, "inc_0060", "vol") is None
+    assert result(wh, "inc_0061", "vol")["status"] == "INCOMPLETE"
+    assert result(wh, "inc_0079", "vol")["numeric_value"] is None
+    assert next(r for r in records if r["delivery_id"] == "inc_resync_ask")["decision"]["resulting_book_state"] == "VALID"
+    assert result(wh, "inc_0081", "vol")["status"] == "INCOMPLETE"
+    assert result(wh, "inc_0090", "vol")["status"] == "INCOMPLETE"
+    assert result(wh, "inc_0091", "vol")["status"] == "VALID"
+    assert result(wh, "inc_0091", "vol")["numeric_value"] is not None
+    with pytest.raises(sqlite3.IntegrityError):
+        wh.compute_analytical_results(run_id)
 
-    wh = LocalWarehouse()
-    wh.load_evidence("fixtures/deliveries.jsonl", "fixtures/decisions.jsonl")
-    run_id = "run_synth_faulted_s42"
-    wh.populate_checkpoints_from_metrics(run_id, "fixtures/expected_faulted_metrics.json")
+
+def test_analytics_match_independent_formula_on_sample_window(tmp_path):
+    wh, run_id, _, events, records, _ = incident_warehouse(tmp_path, "clean")
     wh.compute_analytical_results(run_id)
-
-    # Load oracle expected values
-    with open("fixtures/expected_faulted_metrics.json", "r") as f:
-        expected_records = json.load(f)
-
-    cur = wh.conn.cursor()
-    cur.execute("""
-    SELECT result_id, metric_name, status, numeric_value, evidence_deliveries
-    FROM analytical_results
-    WHERE run_id = ?
-    """, (run_id,))
-    sql_results = cur.fetchall()
-
-    # Declared tolerances
-    TOLERANCE_PRICE = 1e-6
-    TOLERANCE_VOLATILITY = 1e-9
-
-    checked_midpoints = 0
-    checked_spreads = 0
-    checked_volatilities = 0
-
-    expected_by_delivery = {r["delivery_id"]: r for r in expected_records}
-
-    for row in sql_results:
-        metric = row["metric_name"]
-        status = row["status"]
-        val = row["numeric_value"]
-        del_id = row["evidence_deliveries"].split(",")[-1]
-
-        expected_entry = expected_by_delivery.get(del_id)
-        assert expected_entry is not None
-
-        if metric == "MIDPOINT":
-            exp_mid = expected_entry["metrics"].get("midpoint_ticks")
-            if exp_mid is not None:
-                assert abs(val - float(exp_mid)) <= TOLERANCE_PRICE
-                checked_midpoints += 1
-        elif metric == "SPREAD":
-            exp_spr = expected_entry["metrics"].get("spread_ticks")
-            if exp_spr is not None:
-                assert abs(val - float(exp_spr)) <= TOLERANCE_PRICE
-                checked_spreads += 1
-        elif metric == "ROLLING_VOLATILITY":
-            if status == "VALID":
-                assert val is not None
-                assert val >= 0.0
-                checked_volatilities += 1
-            else:
-                assert val is None
-
-    assert checked_midpoints > 0
-    assert checked_spreads > 0
-    assert checked_volatilities > 0
+    by_id = {r["delivery_id"]: r for r in records}
+    for delivery_id in ("inc_0059", "inc_0061", "inc_0091"):
+        end = int(delivery_id.split("_")[1])
+        samples = [by_id[f"inc_{n:04d}"]["metrics"]["midpoint_half_ticks"] / 2
+                   for n in range(end - 10, end + 1)]
+        expected = ReferenceOracle.calculate_rolling_volatility(samples)
+        row = result(wh, delivery_id, "vol")
+        assert row["status"] == "VALID"
+        assert math.isclose(row["numeric_value"], expected, abs_tol=1e-15)
+        assert math.isclose(result(wh, delivery_id, "mid")["numeric_value"], samples[-1], abs_tol=0)
+    # An odd tick sum retains the half tick instead of integer truncation.
+    assert result(wh, "inc_0061", "mid")["numeric_value"] % 1 == .5
+    assert analytical_rows("damaged")[0][("ROLLING_VOLATILITY", "inc_0061")]["status"] == "INCOMPLETE"
 
 
-def test_snowflake_offline_fallback():
-    # When no cloud credentials are provided, runner falls back gracefully
-    creds = check_snowflake_credentials()
-    assert isinstance(creds, dict)
-    # Should run without throwing exception
-    run_bounded_experiment()
+def test_manifest_is_immutable(tmp_path):
+    wh = LocalWarehouse()
+    path = tmp_path / "input.json"
+    path.write_text("[]")
+    manifest = wh.record_run_manifest("fixed", 303, str(path))
+    assert len(manifest["input_hash"]) == 64
+    with pytest.raises(sqlite3.IntegrityError):
+        wh.record_run_manifest("fixed", 303, str(path))
+
+
+def test_checkpoint_decisions_must_match_loaded_evidence(tmp_path):
+    wh, run_id, _, _, records, replay = incident_warehouse(tmp_path)
+    # Existing checkpoint IDs are immutable.
+    with pytest.raises(sqlite3.IntegrityError):
+        wh.populate_checkpoints_from_metrics(run_id, str(replay))
+    wh2 = LocalWarehouse()
+    deliveries = tmp_path / "deliveries.jsonl"
+    decisions = tmp_path / "decisions.jsonl"
+    wh2.load_evidence(str(deliveries), str(decisions))
+    records[0]["decision"]["code"] = "REJECTED_INVALID_PRICE"
+    replay.write_text(json.dumps(records))
+    with pytest.raises(ValueError, match="does not match"):
+        wh2.populate_checkpoints_from_metrics(run_id, str(replay))
+
+
+def test_cloud_credentials_never_trigger_fake_success(monkeypatch):
+    for key in ("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"):
+        monkeypatch.setenv(key, "test-only")
+    with pytest.raises(NotImplementedError, match="not implemented"):
+        run_bounded_experiment()

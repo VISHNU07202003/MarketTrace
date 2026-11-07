@@ -58,10 +58,10 @@ def test_evaluator_manifest_isolation_and_coverage():
     assert expected_states == [
         QualityState.VALID.value,
         QualityState.VALID.value,
-        QualityState.VALID.value,
-        QualityState.VALID.value,
+        QualityState.INCOMPLETE.value,
+        QualityState.INCOMPLETE.value,
         QualityState.STALE.value,
         QualityState.INCOMPLETE.value,
         QualityState.INCOMPLETE.value,
-        QualityState.VALID.value
+        QualityState.INCOMPLETE.value
     ]

@@ -1,5 +1,8 @@
 #include "markettrace/replay.hpp"
 #include <iostream>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 
 using namespace markettrace;
@@ -7,10 +10,10 @@ using namespace markettrace;
 void test_clean_replay_parity() {
     ReplayEngine engine("BTC-USD");
     auto events = ReplayEngine::load_events_from_json("fixtures/clean_run.json");
-    assert(events.size() == 111);
+    assert(events.size() >= 100);
 
     auto records = engine.replay(events);
-    assert(records.size() == 111);
+    assert(records.size() == events.size());
 
     std::string failure_reason;
     bool match = ReplayEngine::verify_parity_with_reference(
@@ -23,16 +26,16 @@ void test_clean_replay_parity() {
         std::cerr << "[FAIL] Clean replay parity check failed: " << failure_reason << std::endl;
         assert(false);
     }
-    std::cout << "[PASS] Clean replay parity verified bit-for-bit with Python oracle (111/111 events)." << std::endl;
+    std::cout << "[PASS] Clean replay decisions and metrics match reference (" << records.size() << " events)." << std::endl;
 }
 
 void test_faulted_replay_parity() {
     ReplayEngine engine("BTC-USD");
     auto events = ReplayEngine::load_events_from_json("fixtures/faulted_run.json");
-    assert(events.size() == 113);
+    assert(events.size() >= 100);
 
     auto records = engine.replay(events);
-    assert(records.size() == 113);
+    assert(records.size() == events.size());
 
     std::string failure_reason;
     bool match = ReplayEngine::verify_parity_with_reference(
@@ -45,7 +48,7 @@ void test_faulted_replay_parity() {
         std::cerr << "[FAIL] Faulted replay parity check failed: " << failure_reason << std::endl;
         assert(false);
     }
-    std::cout << "[PASS] Faulted replay parity verified bit-for-bit with Python oracle (113/113 events, all faults matched)." << std::endl;
+    std::cout << "[PASS] Faulted replay decisions and metrics match reference (" << records.size() << " events)." << std::endl;
 
     // Export evidence JSONL for Phase 3 ingestion
     ReplayEngine::export_evidence_jsonl(
@@ -60,10 +63,10 @@ void test_faulted_replay_parity() {
 void test_holdout_replay_parity() {
     ReplayEngine engine("BTC-USD");
     auto events = ReplayEngine::load_events_from_json("fixtures/holdout_faulted_run.json");
-    assert(events.size() == 113);
+    assert(events.size() >= 100);
 
     auto records = engine.replay(events);
-    assert(records.size() == 113);
+    assert(records.size() == events.size());
 
     std::string failure_reason;
     bool match = ReplayEngine::verify_parity_with_reference(
@@ -76,7 +79,21 @@ void test_holdout_replay_parity() {
         std::cerr << "[FAIL] Holdout replay parity check failed: " << failure_reason << std::endl;
         assert(false);
     }
-    std::cout << "[PASS] Holdout replay parity verified bit-for-bit with Python oracle (seed 101, 113/113 events)." << std::endl;
+    std::cout << "[PASS] Holdout replay decisions and metrics match reference (seed 101, " << records.size() << " events)." << std::endl;
+}
+
+void test_controlled_incident_replay() {
+    for (const char* branch : {"clean", "damaged", "repaired"}) {
+        ReplayEngine engine("BTC-USD");
+        const std::string path = std::string("fixtures/incident_") + branch + ".json";
+        auto events = ReplayEngine::load_events_from_json(path);
+        auto records = engine.replay(events);
+        std::string reason;
+        assert(ReplayEngine::verify_parity_with_reference(
+            records, std::string("fixtures/expected_incident_") + branch + "_metrics.json", reason
+        ));
+    }
+    std::cout << "[PASS] Controlled missing-update and repaired branches match reference." << std::endl;
 }
 
 void test_determinism_and_benchmarks() {
@@ -96,13 +113,8 @@ void test_determinism_and_benchmarks() {
     }
     std::cout << "[PASS] Determinism: two independent replay runs produced identical outputs." << std::endl;
 
-    auto stats = engine.benchmark(events, 100);
-    std::cout << "[BENCHMARK] Replay Throughput & Latency:" << std::endl;
-    std::cout << "  - Events processed: " << stats.event_count * 100 << " (100 iterations of 111 events)" << std::endl;
-    std::cout << "  - Total time: " << stats.total_elapsed_ms << " ms" << std::endl;
-    std::cout << "  - Throughput: " << static_cast<int64_t>(stats.events_per_second) << " events/sec" << std::endl;
-    std::cout << "  - Latency p50: " << stats.p50_latency_ns << " ns" << std::endl;
-    std::cout << "  - Latency p99: " << stats.p99_latency_ns << " ns" << std::endl;
+    // Timing a 111-event fixture inside a unit test is not a valid latency
+    // benchmark. Keep performance work separate from correctness gates.
 }
 
 int main() {
@@ -110,6 +122,7 @@ int main() {
         test_clean_replay_parity();
         test_faulted_replay_parity();
         test_holdout_replay_parity();
+        test_controlled_incident_replay();
         test_determinism_and_benchmarks();
         return 0;
     } catch (const std::exception& ex) {

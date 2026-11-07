@@ -1,0 +1,1978 @@
+[
+  {
+    "delivery_id": "inc_reset_0",
+    "decision": {
+      "delivery_id": "inc_reset_0",
+      "code": "ACCEPTED",
+      "reason": "Snapshot book reset",
+      "decision_time_ns": 1700100000000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": null,
+      "best_ask_ticks": null,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": true
+    }
+  },
+  {
+    "delivery_id": "inc_bid_0",
+    "decision": {
+      "delivery_id": "inc_bid_0",
+      "code": "ACCEPTED",
+      "reason": "Snapshot level applied",
+      "decision_time_ns": 1700100000000000001,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000000,
+      "best_ask_ticks": null,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": true
+    }
+  },
+  {
+    "delivery_id": "inc_ask_0",
+    "decision": {
+      "delivery_id": "inc_ask_0",
+      "code": "ACCEPTED",
+      "reason": "Snapshot level applied",
+      "decision_time_ns": 1700100000000000002,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000000,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000500,
+      "midpoint_half_ticks": 12001000,
+      "spread_ticks": 1000,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0001",
+    "decision": {
+      "delivery_id": "inc_0001",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100001000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000001,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000500,
+      "midpoint_half_ticks": 12001001,
+      "spread_ticks": 999,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0002",
+    "decision": {
+      "delivery_id": "inc_0002",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100002000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000002,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000501,
+      "midpoint_half_ticks": 12001002,
+      "spread_ticks": 998,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0003",
+    "decision": {
+      "delivery_id": "inc_0003",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100003000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000003,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000501,
+      "midpoint_half_ticks": 12001003,
+      "spread_ticks": 997,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0004",
+    "decision": {
+      "delivery_id": "inc_0004",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100004000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000004,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000502,
+      "midpoint_half_ticks": 12001004,
+      "spread_ticks": 996,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0005",
+    "decision": {
+      "delivery_id": "inc_0005",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100005000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000005,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000502,
+      "midpoint_half_ticks": 12001005,
+      "spread_ticks": 995,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0006",
+    "decision": {
+      "delivery_id": "inc_0006",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100006000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000006,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000503,
+      "midpoint_half_ticks": 12001006,
+      "spread_ticks": 994,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0007",
+    "decision": {
+      "delivery_id": "inc_0007",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100007000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000007,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000503,
+      "midpoint_half_ticks": 12001007,
+      "spread_ticks": 993,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0008",
+    "decision": {
+      "delivery_id": "inc_0008",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100008000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000008,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000504,
+      "midpoint_half_ticks": 12001008,
+      "spread_ticks": 992,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0009",
+    "decision": {
+      "delivery_id": "inc_0009",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100009000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000009,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000504,
+      "midpoint_half_ticks": 12001009,
+      "spread_ticks": 991,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0010",
+    "decision": {
+      "delivery_id": "inc_0010",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100010000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000010,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000505,
+      "midpoint_half_ticks": 12001010,
+      "spread_ticks": 990,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0011",
+    "decision": {
+      "delivery_id": "inc_0011",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100011000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000011,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000505,
+      "midpoint_half_ticks": 12001011,
+      "spread_ticks": 989,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0012",
+    "decision": {
+      "delivery_id": "inc_0012",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100012000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000012,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000506,
+      "midpoint_half_ticks": 12001012,
+      "spread_ticks": 988,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0013",
+    "decision": {
+      "delivery_id": "inc_0013",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100013000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000013,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000506,
+      "midpoint_half_ticks": 12001013,
+      "spread_ticks": 987,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0014",
+    "decision": {
+      "delivery_id": "inc_0014",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100014000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000014,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000507,
+      "midpoint_half_ticks": 12001014,
+      "spread_ticks": 986,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0015",
+    "decision": {
+      "delivery_id": "inc_0015",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100015000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000015,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000507,
+      "midpoint_half_ticks": 12001015,
+      "spread_ticks": 985,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0016",
+    "decision": {
+      "delivery_id": "inc_0016",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100016000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000016,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000508,
+      "midpoint_half_ticks": 12001016,
+      "spread_ticks": 984,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0017",
+    "decision": {
+      "delivery_id": "inc_0017",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100017000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000017,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000508,
+      "midpoint_half_ticks": 12001017,
+      "spread_ticks": 983,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0018",
+    "decision": {
+      "delivery_id": "inc_0018",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100018000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000018,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000509,
+      "midpoint_half_ticks": 12001018,
+      "spread_ticks": 982,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0019",
+    "decision": {
+      "delivery_id": "inc_0019",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100019000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000019,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000509,
+      "midpoint_half_ticks": 12001019,
+      "spread_ticks": 981,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0020",
+    "decision": {
+      "delivery_id": "inc_0020",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100020000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000020,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000510,
+      "midpoint_half_ticks": 12001020,
+      "spread_ticks": 980,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0021",
+    "decision": {
+      "delivery_id": "inc_0021",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100021000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000021,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000510,
+      "midpoint_half_ticks": 12001021,
+      "spread_ticks": 979,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0022",
+    "decision": {
+      "delivery_id": "inc_0022",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100022000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000022,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000511,
+      "midpoint_half_ticks": 12001022,
+      "spread_ticks": 978,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0023",
+    "decision": {
+      "delivery_id": "inc_0023",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100023000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000023,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000511,
+      "midpoint_half_ticks": 12001023,
+      "spread_ticks": 977,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0024",
+    "decision": {
+      "delivery_id": "inc_0024",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100024000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000024,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000512,
+      "midpoint_half_ticks": 12001024,
+      "spread_ticks": 976,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0025",
+    "decision": {
+      "delivery_id": "inc_0025",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100025000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000025,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000512,
+      "midpoint_half_ticks": 12001025,
+      "spread_ticks": 975,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0026",
+    "decision": {
+      "delivery_id": "inc_0026",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100026000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000026,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000513,
+      "midpoint_half_ticks": 12001026,
+      "spread_ticks": 974,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0027",
+    "decision": {
+      "delivery_id": "inc_0027",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100027000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000027,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000513,
+      "midpoint_half_ticks": 12001027,
+      "spread_ticks": 973,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0028",
+    "decision": {
+      "delivery_id": "inc_0028",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100028000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000028,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000514,
+      "midpoint_half_ticks": 12001028,
+      "spread_ticks": 972,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0029",
+    "decision": {
+      "delivery_id": "inc_0029",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100029000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000029,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000514,
+      "midpoint_half_ticks": 12001029,
+      "spread_ticks": 971,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0030",
+    "decision": {
+      "delivery_id": "inc_0030",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100030000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000030,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000515,
+      "midpoint_half_ticks": 12001030,
+      "spread_ticks": 970,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0031",
+    "decision": {
+      "delivery_id": "inc_0031",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100031000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000031,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000515,
+      "midpoint_half_ticks": 12001031,
+      "spread_ticks": 969,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0032",
+    "decision": {
+      "delivery_id": "inc_0032",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100032000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000032,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000516,
+      "midpoint_half_ticks": 12001032,
+      "spread_ticks": 968,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0033",
+    "decision": {
+      "delivery_id": "inc_0033",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100033000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000033,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000516,
+      "midpoint_half_ticks": 12001033,
+      "spread_ticks": 967,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0034",
+    "decision": {
+      "delivery_id": "inc_0034",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100034000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000034,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000517,
+      "midpoint_half_ticks": 12001034,
+      "spread_ticks": 966,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0035",
+    "decision": {
+      "delivery_id": "inc_0035",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100035000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000035,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000517,
+      "midpoint_half_ticks": 12001035,
+      "spread_ticks": 965,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0036",
+    "decision": {
+      "delivery_id": "inc_0036",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100036000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000036,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000518,
+      "midpoint_half_ticks": 12001036,
+      "spread_ticks": 964,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0037",
+    "decision": {
+      "delivery_id": "inc_0037",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100037000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000037,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000518,
+      "midpoint_half_ticks": 12001037,
+      "spread_ticks": 963,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0038",
+    "decision": {
+      "delivery_id": "inc_0038",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100038000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000038,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000519,
+      "midpoint_half_ticks": 12001038,
+      "spread_ticks": 962,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0039",
+    "decision": {
+      "delivery_id": "inc_0039",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100039000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000039,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000519,
+      "midpoint_half_ticks": 12001039,
+      "spread_ticks": 961,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0040",
+    "decision": {
+      "delivery_id": "inc_0040",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100040000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000040,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000520,
+      "midpoint_half_ticks": 12001040,
+      "spread_ticks": 960,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0041",
+    "decision": {
+      "delivery_id": "inc_0041",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100041000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000041,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000520,
+      "midpoint_half_ticks": 12001041,
+      "spread_ticks": 959,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0042",
+    "decision": {
+      "delivery_id": "inc_0042",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100042000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000042,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000521,
+      "midpoint_half_ticks": 12001042,
+      "spread_ticks": 958,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0043",
+    "decision": {
+      "delivery_id": "inc_0043",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100043000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000043,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000521,
+      "midpoint_half_ticks": 12001043,
+      "spread_ticks": 957,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0044",
+    "decision": {
+      "delivery_id": "inc_0044",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100044000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000044,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000522,
+      "midpoint_half_ticks": 12001044,
+      "spread_ticks": 956,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0045",
+    "decision": {
+      "delivery_id": "inc_0045",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100045000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000045,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000522,
+      "midpoint_half_ticks": 12001045,
+      "spread_ticks": 955,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0046",
+    "decision": {
+      "delivery_id": "inc_0046",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100046000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000046,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000523,
+      "midpoint_half_ticks": 12001046,
+      "spread_ticks": 954,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0047",
+    "decision": {
+      "delivery_id": "inc_0047",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100047000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000047,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000523,
+      "midpoint_half_ticks": 12001047,
+      "spread_ticks": 953,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0048",
+    "decision": {
+      "delivery_id": "inc_0048",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100048000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000048,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000524,
+      "midpoint_half_ticks": 12001048,
+      "spread_ticks": 952,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0049",
+    "decision": {
+      "delivery_id": "inc_0049",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100049000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000049,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000524,
+      "midpoint_half_ticks": 12001049,
+      "spread_ticks": 951,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0050",
+    "decision": {
+      "delivery_id": "inc_0050",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100050000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000050,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000525,
+      "midpoint_half_ticks": 12001050,
+      "spread_ticks": 950,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0051",
+    "decision": {
+      "delivery_id": "inc_0051",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100051000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000051,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000525,
+      "midpoint_half_ticks": 12001051,
+      "spread_ticks": 949,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0052",
+    "decision": {
+      "delivery_id": "inc_0052",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100052000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000052,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000526,
+      "midpoint_half_ticks": 12001052,
+      "spread_ticks": 948,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0053",
+    "decision": {
+      "delivery_id": "inc_0053",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100053000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000053,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000526,
+      "midpoint_half_ticks": 12001053,
+      "spread_ticks": 947,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0054",
+    "decision": {
+      "delivery_id": "inc_0054",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100054000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000054,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000527,
+      "midpoint_half_ticks": 12001054,
+      "spread_ticks": 946,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0055",
+    "decision": {
+      "delivery_id": "inc_0055",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100055000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000055,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000527,
+      "midpoint_half_ticks": 12001055,
+      "spread_ticks": 945,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0056",
+    "decision": {
+      "delivery_id": "inc_0056",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100056000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000056,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000528,
+      "midpoint_half_ticks": 12001056,
+      "spread_ticks": 944,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0057",
+    "decision": {
+      "delivery_id": "inc_0057",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100057000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000057,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000528,
+      "midpoint_half_ticks": 12001057,
+      "spread_ticks": 943,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0058",
+    "decision": {
+      "delivery_id": "inc_0058",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100058000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000058,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000529,
+      "midpoint_half_ticks": 12001058,
+      "spread_ticks": 942,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0059",
+    "decision": {
+      "delivery_id": "inc_0059",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100059000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000529,
+      "midpoint_half_ticks": 12001059,
+      "spread_ticks": 941,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0061",
+    "decision": {
+      "delivery_id": "inc_0061",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Sequence gap: expected 160, got 161",
+      "decision_time_ns": 1700100061000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0062",
+    "decision": {
+      "delivery_id": "inc_0062",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100062000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0063",
+    "decision": {
+      "delivery_id": "inc_0063",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100063000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0064",
+    "decision": {
+      "delivery_id": "inc_0064",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100064000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0065",
+    "decision": {
+      "delivery_id": "inc_0065",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100065000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0066",
+    "decision": {
+      "delivery_id": "inc_0066",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100066000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0067",
+    "decision": {
+      "delivery_id": "inc_0067",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100067000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0068",
+    "decision": {
+      "delivery_id": "inc_0068",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100068000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0069",
+    "decision": {
+      "delivery_id": "inc_0069",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100069000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0070",
+    "decision": {
+      "delivery_id": "inc_0070",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100070000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0071",
+    "decision": {
+      "delivery_id": "inc_0071",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100071000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0072",
+    "decision": {
+      "delivery_id": "inc_0072",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100072000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0073",
+    "decision": {
+      "delivery_id": "inc_0073",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100073000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0074",
+    "decision": {
+      "delivery_id": "inc_0074",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100074000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0075",
+    "decision": {
+      "delivery_id": "inc_0075",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100075000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0076",
+    "decision": {
+      "delivery_id": "inc_0076",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100076000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0077",
+    "decision": {
+      "delivery_id": "inc_0077",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100077000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0078",
+    "decision": {
+      "delivery_id": "inc_0078",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100078000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0079",
+    "decision": {
+      "delivery_id": "inc_0079",
+      "code": "REJECTED_OUT_OF_SEQUENCE",
+      "reason": "Book is incomplete; authoritative snapshot required",
+      "decision_time_ns": 1700100079000000000,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000059,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_resync_reset",
+    "decision": {
+      "delivery_id": "inc_resync_reset",
+      "code": "ACCEPTED",
+      "reason": "Snapshot book reset",
+      "decision_time_ns": 1700100079999999997,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": null,
+      "best_ask_ticks": null,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": true
+    }
+  },
+  {
+    "delivery_id": "inc_resync_bid",
+    "decision": {
+      "delivery_id": "inc_resync_bid",
+      "code": "ACCEPTED",
+      "reason": "Snapshot level applied",
+      "decision_time_ns": 1700100079999999998,
+      "resulting_book_state": "INCOMPLETE"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000080,
+      "best_ask_ticks": null,
+      "midpoint_ticks": null,
+      "midpoint_half_ticks": null,
+      "spread_ticks": null,
+      "is_crossed": false,
+      "is_empty": true
+    }
+  },
+  {
+    "delivery_id": "inc_resync_ask",
+    "decision": {
+      "delivery_id": "inc_resync_ask",
+      "code": "ACCEPTED",
+      "reason": "Snapshot level applied",
+      "decision_time_ns": 1700100079999999999,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000080,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000540,
+      "midpoint_half_ticks": 12001080,
+      "spread_ticks": 920,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0081",
+    "decision": {
+      "delivery_id": "inc_0081",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100081000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000081,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000540,
+      "midpoint_half_ticks": 12001081,
+      "spread_ticks": 919,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0082",
+    "decision": {
+      "delivery_id": "inc_0082",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100082000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000082,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000541,
+      "midpoint_half_ticks": 12001082,
+      "spread_ticks": 918,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0083",
+    "decision": {
+      "delivery_id": "inc_0083",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100083000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000083,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000541,
+      "midpoint_half_ticks": 12001083,
+      "spread_ticks": 917,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0084",
+    "decision": {
+      "delivery_id": "inc_0084",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100084000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000084,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000542,
+      "midpoint_half_ticks": 12001084,
+      "spread_ticks": 916,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0085",
+    "decision": {
+      "delivery_id": "inc_0085",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100085000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000085,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000542,
+      "midpoint_half_ticks": 12001085,
+      "spread_ticks": 915,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0086",
+    "decision": {
+      "delivery_id": "inc_0086",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100086000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000086,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000543,
+      "midpoint_half_ticks": 12001086,
+      "spread_ticks": 914,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0087",
+    "decision": {
+      "delivery_id": "inc_0087",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100087000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000087,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000543,
+      "midpoint_half_ticks": 12001087,
+      "spread_ticks": 913,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0088",
+    "decision": {
+      "delivery_id": "inc_0088",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100088000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000088,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000544,
+      "midpoint_half_ticks": 12001088,
+      "spread_ticks": 912,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0089",
+    "decision": {
+      "delivery_id": "inc_0089",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100089000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000089,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000544,
+      "midpoint_half_ticks": 12001089,
+      "spread_ticks": 911,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0090",
+    "decision": {
+      "delivery_id": "inc_0090",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100090000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000090,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000545,
+      "midpoint_half_ticks": 12001090,
+      "spread_ticks": 910,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0091",
+    "decision": {
+      "delivery_id": "inc_0091",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100091000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000091,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000545,
+      "midpoint_half_ticks": 12001091,
+      "spread_ticks": 909,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0092",
+    "decision": {
+      "delivery_id": "inc_0092",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100092000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000092,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000546,
+      "midpoint_half_ticks": 12001092,
+      "spread_ticks": 908,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0093",
+    "decision": {
+      "delivery_id": "inc_0093",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100093000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000093,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000546,
+      "midpoint_half_ticks": 12001093,
+      "spread_ticks": 907,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0094",
+    "decision": {
+      "delivery_id": "inc_0094",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100094000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000094,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000547,
+      "midpoint_half_ticks": 12001094,
+      "spread_ticks": 906,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0095",
+    "decision": {
+      "delivery_id": "inc_0095",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100095000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000095,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000547,
+      "midpoint_half_ticks": 12001095,
+      "spread_ticks": 905,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0096",
+    "decision": {
+      "delivery_id": "inc_0096",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100096000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000096,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000548,
+      "midpoint_half_ticks": 12001096,
+      "spread_ticks": 904,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0097",
+    "decision": {
+      "delivery_id": "inc_0097",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100097000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000097,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000548,
+      "midpoint_half_ticks": 12001097,
+      "spread_ticks": 903,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0098",
+    "decision": {
+      "delivery_id": "inc_0098",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100098000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000098,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000549,
+      "midpoint_half_ticks": 12001098,
+      "spread_ticks": 902,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0099",
+    "decision": {
+      "delivery_id": "inc_0099",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100099000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000099,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000549,
+      "midpoint_half_ticks": 12001099,
+      "spread_ticks": 901,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  },
+  {
+    "delivery_id": "inc_0100",
+    "decision": {
+      "delivery_id": "inc_0100",
+      "code": "ACCEPTED",
+      "reason": "Update applied successfully",
+      "decision_time_ns": 1700100100000000000,
+      "resulting_book_state": "VALID"
+    },
+    "metrics": {
+      "best_bid_ticks": 6000100,
+      "best_ask_ticks": 6001000,
+      "midpoint_ticks": 6000550,
+      "midpoint_half_ticks": 12001100,
+      "spread_ticks": 900,
+      "is_crossed": false,
+      "is_empty": false
+    }
+  }
+]

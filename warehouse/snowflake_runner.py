@@ -1,69 +1,67 @@
-"""
-MarketTrace Snowflake Experiment Runner.
-Executes bounded warehouse loads when credentials exist;
-falls back cleanly to LocalWarehouse offline validation when credentials are unset.
+"""Offline warehouse experiment. Cloud execution is intentionally blocked.
+
+The Snowflake SQL files remain unverified designs. This runner will never
+silently fall back when credentials are present or claim an unexecuted load.
 """
 
+import json
 import os
-import sys
-from typing import Dict, Any
+import tempfile
+from pathlib import Path
+
 from warehouse.local_warehouse import LocalWarehouse
 
 
-def check_snowflake_credentials() -> Dict[str, str]:
-    required_keys = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"]
-    creds = {k: os.environ.get(k, "") for k in required_keys}
-    creds["SNOWFLAKE_WAREHOUSE"] = os.environ.get("SNOWFLAKE_WAREHOUSE", "MARKETTRACE_WH")
-    creds["SNOWFLAKE_DATABASE"] = os.environ.get("SNOWFLAKE_DATABASE", "MARKETTRACE_DB")
-    creds["SNOWFLAKE_SCHEMA"] = os.environ.get("SNOWFLAKE_SCHEMA", "MARKETTRACE_SCHEMA")
-    return creds
+def check_snowflake_credentials() -> dict[str, str]:
+    keys = ("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD")
+    return {key: os.environ.get(key, "") for key in keys}
 
 
 def run_bounded_experiment():
-    print("=" * 60)
-    print(" MarketTrace Warehouse Experiment Runner")
-    print("=" * 60)
-
-    creds = check_snowflake_credentials()
-    has_cloud_creds = all(creds[k] for k in ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"])
-
-    if not has_cloud_creds:
-        print("[STATUS] No Snowflake credentials in environment.")
-        print("[FALLBACK] Running bounded local offline warehouse validation (SQLite contract).")
-        
-        wh = LocalWarehouse()
-        counts = wh.load_evidence(
-            "fixtures/deliveries.jsonl",
-            "fixtures/decisions.jsonl"
+    if all(check_snowflake_credentials().values()):
+        raise NotImplementedError(
+            "Snowflake cloud loading is not implemented or verified; no cloud operation was attempted."
         )
-        print(f"[LOAD] Ingested {counts['deliveries']} deliveries and {counts['decisions']} decisions.")
 
-        run_id = "run_synth_faulted_s42"
-        chk_count = wh.populate_checkpoints_from_metrics(run_id, "fixtures/expected_faulted_metrics.json")
-        print(f"[CHECKPOINTS] Populated {chk_count} book checkpoints.")
+    print("[STATUS] Offline SQLite experiment; Snowflake was not contacted.")
+    events = json.loads(Path("fixtures/incident_damaged.json").read_text())
+    engine_path = Path("runs/incident_damaged_engine.json")
+    reference_path = Path("fixtures/expected_incident_damaged_metrics.json")
+    records_path = engine_path if engine_path.exists() else reference_path
+    records = json.loads(records_path.read_text())
+    reference = json.loads(reference_path.read_text())
 
-        res_count = wh.compute_analytical_results(run_id)
-        print(f"[ANALYTICS] Computed and stored {res_count} versioned analytical results.")
+    if len(events) != len(records) or len(records) != len(reference):
+        raise ValueError("Input and replay record counts differ")
+    for event, record, expected in zip(events, records, reference):
+        if event["delivery_id"] != record["delivery_id"] or record["delivery_id"] != expected["delivery_id"]:
+            raise ValueError("Event/replay delivery IDs differ")
+        for key in ("code", "resulting_book_state"):
+            if record["decision"][key] != expected["decision"][key]:
+                raise ValueError(f"Reference decision mismatch at {event['delivery_id']}")
+        for key in ("best_bid_ticks", "best_ask_ticks", "midpoint_half_ticks", "spread_ticks"):
+            if record["metrics"].get(key) != expected["metrics"].get(key):
+                raise ValueError(f"Reference metric mismatch at {event['delivery_id']}: {key}")
 
-        summary = wh.get_run_summary(run_id)
-        print("\n[VERIFIED SUMMARY]")
-        print(f"  - Run ID: {summary['run_id']}")
-        print(f"  - Deliveries: {summary['total_deliveries']}")
-        print(f"  - Decision Breakdown: {summary['decisions']}")
-        print(f"  - Analytics Breakdown: {summary['results_summary']}")
-        print("\n[PASS] Local warehouse verification passed with 100% offline parity.")
-        return
+    with tempfile.TemporaryDirectory() as temporary:
+        deliveries = Path(temporary) / "deliveries.jsonl"
+        decisions = Path(temporary) / "decisions.jsonl"
+        deliveries.write_text("".join(json.dumps(event) + "\n" for event in events))
+        decisions.write_text("".join(json.dumps(record["decision"]) + "\n" for record in records))
+        warehouse = LocalWarehouse()
+        counts = warehouse.load_evidence(str(deliveries), str(decisions))
 
-    print("[INFO] Snowflake credentials detected. Preparing bounded cloud run...")
-    print("[WARNING] Enforcing X-Small warehouse and auto-suspend teardown.")
-    # Cloud execution path requires snowflake-connector-python
-    try:
-        import snowflake.connector
-    except ImportError:
-        print("[ERROR] snowflake-connector-python not installed. Run `pip install snowflake-connector-python`.")
-        return
-
-    # In actual cloud run, execute load.sql and teardown.sql within bounded budget.
+    run_id = "run_incident_damaged_s303"
+    warehouse.record_run_manifest(run_id, 303, "fixtures/incident_damaged.json")
+    checkpoints = warehouse.populate_checkpoints_from_metrics(run_id, str(records_path))
+    analytics = warehouse.compute_analytical_results(run_id)
+    summary = warehouse.get_run_summary(run_id)
+    print(f"[LOAD] {counts['deliveries']} deliveries, {counts['decisions']} decisions, "
+          f"{checkpoints} checkpoints, {analytics} analytical result rows.")
+    print(f"[SUMMARY] {summary['results_summary']}")
+    print("[PASS] Checked C++ engine records against reference." if engine_path.exists()
+          else "[REFERENCE ONLY] Run the C++ CLI with --output to verify the engine-to-warehouse chain.")
+    return summary
 
 
 if __name__ == "__main__":

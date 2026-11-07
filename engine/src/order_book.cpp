@@ -8,7 +8,7 @@ OrderBook::OrderBook(std::string instrument)
 void OrderBook::clear() {
     bids_.clear();
     asks_.clear();
-    current_state_ = QualityState::Valid;
+    current_state_ = QualityState::Incomplete;
     last_provider_sequence_.reset();
     last_update_time_ns_ = 0;
 }
@@ -35,7 +35,8 @@ ProcessingDecision OrderBook::apply(const EventEnvelope& event) {
         dec.code = DecisionCode::Accepted;
 
         int64_t elapsed = (last_update_time_ns_ > 0) ? (event.receive_time_ns - last_update_time_ns_) : 0;
-        if (last_update_time_ns_ > 0 && elapsed > FRESHNESS_TIMEOUT_NS) {
+        if (last_update_time_ns_ > 0 && elapsed > FRESHNESS_TIMEOUT_NS &&
+            current_state_ != QualityState::Incomplete) {
             current_state_ = QualityState::Stale;
             dec.reason = "Staleness threshold exceeded: elapsed " + std::to_string(elapsed) + 
                          "ns > " + std::to_string(FRESHNESS_TIMEOUT_NS) + "ns";
@@ -72,12 +73,12 @@ ProcessingDecision OrderBook::apply_snapshot(const EventEnvelope& event) {
         }
         dec.code = DecisionCode::Accepted;
         dec.reason = "Snapshot book reset initialized";
-        dec.resulting_book_state = QualityState::Valid;
-        current_state_ = QualityState::Valid;
+        dec.resulting_book_state = current_state_;
         return dec;
     }
 
     if (event.price_ticks <= 0) {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedInvalidPrice;
         dec.reason = "Snapshot price ticks must be positive";
         dec.resulting_book_state = current_state_;
@@ -85,12 +86,29 @@ ProcessingDecision OrderBook::apply_snapshot(const EventEnvelope& event) {
     }
 
     if (event.size_units < 0) {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedInvalidSize;
         dec.reason = "Snapshot size units must be non-negative";
         dec.resulting_book_state = current_state_;
         return dec;
     }
 
+    if (event.side == Side::Bid && event.size_units > 0 &&
+        !asks_.empty() && event.price_ticks >= asks_.begin()->first) {
+        current_state_ = QualityState::Incomplete;
+        dec.code = DecisionCode::RejectedInvalidPrice;
+        dec.reason = "Snapshot level would cross the book";
+        dec.resulting_book_state = current_state_;
+        return dec;
+    }
+    if (event.side == Side::Ask && event.size_units > 0 &&
+        !bids_.empty() && event.price_ticks <= bids_.begin()->first) {
+        current_state_ = QualityState::Incomplete;
+        dec.code = DecisionCode::RejectedInvalidPrice;
+        dec.reason = "Snapshot level would cross the book";
+        dec.resulting_book_state = current_state_;
+        return dec;
+    }
     if (event.side == Side::Bid) {
         if (event.size_units == 0) bids_.erase(event.price_ticks);
         else bids_[event.price_ticks] = event.size_units;
@@ -98,6 +116,7 @@ ProcessingDecision OrderBook::apply_snapshot(const EventEnvelope& event) {
         if (event.size_units == 0) asks_.erase(event.price_ticks);
         else asks_[event.price_ticks] = event.size_units;
     } else {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedUnknownSide;
         dec.reason = "Snapshot side must be Bid or Ask";
         dec.resulting_book_state = current_state_;
@@ -108,10 +127,11 @@ ProcessingDecision OrderBook::apply_snapshot(const EventEnvelope& event) {
         last_provider_sequence_ = event.provider_sequence;
     }
     last_update_time_ns_ = event.receive_time_ns;
-    current_state_ = QualityState::Valid;
+    current_state_ = (!bids_.empty() && !asks_.empty())
+        ? QualityState::Valid : QualityState::Incomplete;
     dec.code = DecisionCode::Accepted;
     dec.reason = "Snapshot level applied";
-    dec.resulting_book_state = QualityState::Valid;
+    dec.resulting_book_state = current_state_;
     return dec;
 }
 
@@ -119,6 +139,14 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
     ProcessingDecision dec;
     dec.delivery_id = event.delivery_id;
     dec.decision_time_ns = event.receive_time_ns;
+
+    // A damaged or incomplete book cannot be repaired by an incremental update.
+    if (current_state_ == QualityState::Incomplete) {
+        dec.code = DecisionCode::RejectedOutOfSequence;
+        dec.reason = "Book is incomplete; authoritative snapshot required";
+        dec.resulting_book_state = current_state_;
+        return dec;
+    }
 
     // 1. Sequence check (if provider sequence provided)
     if (event.provider_sequence.has_value() && last_provider_sequence_.has_value()) {
@@ -140,18 +168,13 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
                          ", got " + std::to_string(actual_seq);
             current_state_ = QualityState::Incomplete;
             dec.resulting_book_state = QualityState::Incomplete;
-            last_provider_sequence_ = actual_seq;
             return dec;
         }
     }
 
-    if (event.provider_sequence.has_value()) {
-        last_provider_sequence_ = event.provider_sequence;
-    }
-    last_update_time_ns_ = event.receive_time_ns;
-
     // 2. Validate price
     if (event.price_ticks <= 0) {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedInvalidPrice;
         dec.reason = "Price ticks must be positive: " + std::to_string(event.price_ticks);
         dec.resulting_book_state = current_state_;
@@ -160,6 +183,7 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
 
     // 3. Validate size
     if (event.size_units < 0) {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedInvalidSize;
         dec.reason = "Size units cannot be negative: " + std::to_string(event.size_units);
         dec.resulting_book_state = current_state_;
@@ -167,6 +191,22 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
     }
 
     // 4. Validate side
+    if (event.side == Side::Bid && event.size_units > 0 &&
+        !asks_.empty() && event.price_ticks >= asks_.begin()->first) {
+        current_state_ = QualityState::Incomplete;
+        dec.code = DecisionCode::RejectedInvalidPrice;
+        dec.reason = "Update would cross the book";
+        dec.resulting_book_state = current_state_;
+        return dec;
+    }
+    if (event.side == Side::Ask && event.size_units > 0 &&
+        !bids_.empty() && event.price_ticks <= bids_.begin()->first) {
+        current_state_ = QualityState::Incomplete;
+        dec.code = DecisionCode::RejectedInvalidPrice;
+        dec.reason = "Update would cross the book";
+        dec.resulting_book_state = current_state_;
+        return dec;
+    }
     if (event.side == Side::Bid) {
         if (event.size_units == 0) {
             bids_.erase(event.price_ticks);
@@ -180,19 +220,19 @@ ProcessingDecision OrderBook::apply_update(const EventEnvelope& event) {
             asks_[event.price_ticks] = event.size_units;
         }
     } else {
+        current_state_ = QualityState::Incomplete;
         dec.code = DecisionCode::RejectedUnknownSide;
         dec.reason = "Update side must be Bid or Ask";
         dec.resulting_book_state = current_state_;
         return dec;
     }
 
-    if (event.provider_sequence.has_value()) {
-        last_provider_sequence_ = event.provider_sequence;
-    }
+    if (event.provider_sequence.has_value()) last_provider_sequence_ = event.provider_sequence;
     if (current_state_ == QualityState::Stale) {
         current_state_ = QualityState::Valid;
     }
     last_update_time_ns_ = event.receive_time_ns;
+    if (bids_.empty() || asks_.empty()) current_state_ = QualityState::Incomplete;
 
     dec.code = DecisionCode::Accepted;
     dec.reason = "Update applied successfully";
@@ -215,8 +255,11 @@ BookMetrics OrderBook::metrics() const {
         int64_t b = *m.best_bid_ticks;
         int64_t a = *m.best_ask_ticks;
         m.is_crossed = (b >= a);
-        m.spread_ticks = a - b;
-        m.midpoint_ticks = (a + b) / 2;
+        if (current_state_ == QualityState::Valid && !m.is_crossed) {
+            m.spread_ticks = a - b;
+            m.midpoint_ticks = (a + b) / 2;
+            m.midpoint_half_ticks = a + b;
+        }
     }
 
     return m;

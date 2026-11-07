@@ -12,7 +12,7 @@ from reference.oracle import ReferenceOracle
 
 def test_oracle_order_book_operations():
     oracle = ReferenceOracle(instrument="BTC-USD")
-    assert oracle.state == QualityState.VALID
+    assert oracle.state == QualityState.INCOMPLETE
 
     # 1. Reset snapshot
     snap_reset = EventEnvelope(
@@ -29,12 +29,12 @@ def test_oracle_order_book_operations():
     assert dec.code == DecisionCode.ACCEPTED
     assert m.is_empty is True
 
-    # 2. Add bid and ask levels
+    # 2. Complete the snapshot with bid and ask levels
     bid_event = EventEnvelope(
         run_id="test_run",
         delivery_id="d2",
         instrument="BTC-USD",
-        message_kind=MessageKind.UPDATE,
+        message_kind=MessageKind.SNAPSHOT,
         side=Side.BID,
         price_ticks=5_000_000,   # $50,000.00
         size_units=100_000_000,  # 1.0 BTC
@@ -48,7 +48,7 @@ def test_oracle_order_book_operations():
         run_id="test_run",
         delivery_id="d3",
         instrument="BTC-USD",
-        message_kind=MessageKind.UPDATE,
+        message_kind=MessageKind.SNAPSHOT,
         side=Side.ASK,
         price_ticks=5_001_000,   # $50,010.00
         size_units=200_000_000,  # 2.0 BTC
@@ -60,6 +60,7 @@ def test_oracle_order_book_operations():
     assert m.best_ask_ticks == 5_001_000
     assert m.spread_ticks == 1_000
     assert m.midpoint_ticks == 5_000_500
+    assert m.midpoint_half_ticks == 10_001_000
     assert m.is_crossed is False
     assert m.is_empty is False
 
@@ -78,10 +79,17 @@ def test_oracle_order_book_operations():
     assert dec.code == DecisionCode.ACCEPTED
     assert m.best_ask_ticks is None
     assert m.is_empty is True
+    assert oracle.state == QualityState.INCOMPLETE
 
 
 def test_oracle_sequence_gap_and_resync():
     oracle = ReferenceOracle(instrument="BTC-USD")
+
+    for delivery_id, side, price in (("snap_b", Side.BID, 900), ("snap_a", Side.ASK, 1100)):
+        oracle.apply(EventEnvelope(
+            run_id="r1", delivery_id=delivery_id, message_kind=MessageKind.SNAPSHOT,
+            side=side, price_ticks=price, size_units=10, provider_sequence=99
+        ))
 
     # Sequence 100
     e1 = EventEnvelope(
@@ -112,7 +120,7 @@ def test_oracle_sequence_gap_and_resync():
     assert dec2.resulting_book_state == QualityState.INCOMPLETE
     assert oracle.state == QualityState.INCOMPLETE
 
-    # Resync snapshot restores state to VALID
+    # A reset alone is not an authoritative complete book.
     resync = EventEnvelope(
         run_id="r1",
         delivery_id="d3",
@@ -125,8 +133,8 @@ def test_oracle_sequence_gap_and_resync():
     )
     dec3, _ = oracle.apply(resync)
     assert dec3.code == DecisionCode.ACCEPTED
-    assert dec3.resulting_book_state == QualityState.VALID
-    assert oracle.state == QualityState.VALID
+    assert dec3.resulting_book_state == QualityState.INCOMPLETE
+    assert oracle.state == QualityState.INCOMPLETE
 
 
 def test_oracle_rolling_volatility_exact_math():
@@ -164,6 +172,13 @@ def test_oracle_rolling_volatility_exact_math():
 
 def test_oracle_timer_staleness():
     oracle = ReferenceOracle(instrument="BTC-USD")
+
+    for delivery_id, side, price in (("snap_b", Side.BID, 4_999_000), ("snap_a", Side.ASK, 5_001_000)):
+        oracle.apply(EventEnvelope(
+            run_id="r1", delivery_id=delivery_id, message_kind=MessageKind.SNAPSHOT,
+            side=side, price_ticks=price, size_units=10, provider_sequence=0,
+            receive_time_ns=1_000_000_000
+        ))
     
     # 1. Update at t = 1,000,000,000 ns
     e1 = EventEnvelope(
@@ -179,6 +194,7 @@ def test_oracle_timer_staleness():
     )
     oracle.apply(e1)
     assert oracle.state == QualityState.VALID
+
 
     # 2. Heartbeat at t = 2,000,000,000 ns (elapsed 1s <= 5s) -> stays VALID
     t1 = EventEnvelope(
@@ -220,3 +236,26 @@ def test_oracle_timer_staleness():
     dec_e2, _ = oracle.apply(e2)
     assert dec_e2.code == DecisionCode.ACCEPTED
     assert oracle.state == QualityState.VALID
+
+
+def test_invalid_sequenced_update_requires_snapshot_and_half_tick_is_exact():
+    oracle = ReferenceOracle()
+    for delivery_id, side, price in (("b", Side.BID, 1000), ("a", Side.ASK, 1001)):
+        _, metrics = oracle.apply(EventEnvelope(
+            run_id="r", delivery_id=delivery_id, message_kind=MessageKind.SNAPSHOT,
+            side=side, price_ticks=price, size_units=10, provider_sequence=10
+        ))
+    assert metrics.midpoint_half_ticks == 2001  # $10.005 with cent ticks
+    bad, metrics = oracle.apply(EventEnvelope(
+        run_id="r", delivery_id="bad", message_kind=MessageKind.UPDATE,
+        side=Side.BID, price_ticks=-1, size_units=10, provider_sequence=11
+    ))
+    assert bad.code == DecisionCode.REJECTED_INVALID_PRICE
+    assert bad.resulting_book_state == QualityState.INCOMPLETE
+    assert metrics.midpoint_half_ticks is None
+    next_decision, _ = oracle.apply(EventEnvelope(
+        run_id="r", delivery_id="later", message_kind=MessageKind.UPDATE,
+        side=Side.BID, price_ticks=999, size_units=10, provider_sequence=12
+    ))
+    assert next_decision.code == DecisionCode.REJECTED_OUT_OF_SEQUENCE
+    assert oracle.state == QualityState.INCOMPLETE

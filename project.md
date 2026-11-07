@@ -1,6 +1,6 @@
 # MarketTrace — project blueprint
 
-**Status:** planned; no MarketTrace implementation, Snowflake experiment, benchmark, or live capture is claimed by this document. Antigravity builds phases 0–8; Codex independently reviews and polishes the resulting project. Keep this file accurate as the code changes.
+**Status (2026-11-06):** This is the original phase blueprint. A synthetic offline candidate now runs and has been independently reviewed in `CODEX_PHASE9_AUDIT.md`. Cloud Snowflake, live capture, persisted revisions, and credible performance benchmarks are still pending. Acceptance gates below describe goals, not a retrospective pass report.
 
 ## The problem
 

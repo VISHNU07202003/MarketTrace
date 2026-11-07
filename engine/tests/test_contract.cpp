@@ -1,5 +1,8 @@
 #include "markettrace/envelope.hpp"
 #include "markettrace/order_book.hpp"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <iostream>
 
@@ -7,7 +10,7 @@ using namespace markettrace;
 
 void test_basic_book_contract() {
     OrderBook book("BTC-USD");
-    assert(book.state() == QualityState::Valid);
+    assert(book.state() == QualityState::Incomplete);
     assert(book.metrics().is_empty);
 
     // Apply snapshot initialization
@@ -23,17 +26,17 @@ void test_basic_book_contract() {
     
     auto dec1 = book.apply(snap_reset);
     assert(dec1.code == DecisionCode::Accepted);
-    assert(book.state() == QualityState::Valid);
+    assert(book.state() == QualityState::Incomplete);
 
     // Add bid: 60,000.00 USD (6,000,000 ticks), size 1.5 BTC (150,000,000 satoshis)
     EventEnvelope bid_event;
     bid_event.delivery_id = "del-002";
     bid_event.instrument = "BTC-USD";
-    bid_event.message_kind = MessageKind::Update;
+    bid_event.message_kind = MessageKind::Snapshot;
     bid_event.side = Side::Bid;
     bid_event.price_ticks = 6'000'000;
     bid_event.size_units = 150'000'000;
-    bid_event.provider_sequence = 101;
+    bid_event.provider_sequence = 100;
     bid_event.receive_time_ns = 1'000'001'000;
 
     auto dec2 = book.apply(bid_event);
@@ -43,11 +46,11 @@ void test_basic_book_contract() {
     EventEnvelope ask_event;
     ask_event.delivery_id = "del-003";
     ask_event.instrument = "BTC-USD";
-    ask_event.message_kind = MessageKind::Update;
+    ask_event.message_kind = MessageKind::Snapshot;
     ask_event.side = Side::Ask;
     ask_event.price_ticks = 6'001'000;
     ask_event.size_units = 200'000'000;
-    ask_event.provider_sequence = 102;
+    ask_event.provider_sequence = 100;
     ask_event.receive_time_ns = 1'000'002'000;
 
     auto dec3 = book.apply(ask_event);
@@ -60,6 +63,16 @@ void test_basic_book_contract() {
     assert(*m.best_ask_ticks == 6'001'000);
     assert(*m.spread_ticks == 1'000);
     assert(*m.midpoint_ticks == 6'000'500);
+    assert(*m.midpoint_half_ticks == 12'001'000);
+
+    EventEnvelope valid_update = bid_event;
+    valid_update.message_kind = MessageKind::Update;
+    valid_update.provider_sequence = 101;
+    valid_update.delivery_id = "valid-101";
+    assert(book.apply(valid_update).code == DecisionCode::Accepted);
+    valid_update.provider_sequence = 102;
+    valid_update.delivery_id = "valid-102";
+    assert(book.apply(valid_update).code == DecisionCode::Accepted);
 
     // Sequence gap detection: inject sequence 105 (missing 103, 104)
     EventEnvelope gap_event;
@@ -90,7 +103,18 @@ void test_basic_book_contract() {
 
     auto dec5 = book.apply(resync_snap);
     assert(dec5.code == DecisionCode::Accepted);
-    assert(book.state() == QualityState::Valid);
+    assert(book.state() == QualityState::Incomplete);
+
+    auto complete_snapshot = [&](int64_t seq) {
+        auto b = bid_event;
+        b.provider_sequence = seq;
+        auto a = ask_event;
+        a.provider_sequence = seq;
+        assert(book.apply(b).code == DecisionCode::Accepted);
+        assert(book.apply(a).code == DecisionCode::Accepted);
+        assert(book.state() == QualityState::Valid);
+    };
+    complete_snapshot(200);
 
     // Negative validation tests:
     EventEnvelope bad_price;
@@ -104,6 +128,14 @@ void test_basic_book_contract() {
 
     auto dec6 = book.apply(bad_price);
     assert(dec6.code == DecisionCode::RejectedInvalidPrice);
+    assert(book.state() == QualityState::Incomplete);
+    auto ignored = valid_update;
+    ignored.provider_sequence = 202;
+    assert(book.apply(ignored).code == DecisionCode::RejectedOutOfSequence);
+
+    resync_snap.provider_sequence = 201;
+    assert(book.apply(resync_snap).code == DecisionCode::Accepted);
+    complete_snapshot(201);
 
     EventEnvelope bad_size;
     bad_size.delivery_id = "del-007";
@@ -116,6 +148,9 @@ void test_basic_book_contract() {
 
     auto dec7 = book.apply(bad_size);
     assert(dec7.code == DecisionCode::RejectedInvalidSize);
+    resync_snap.provider_sequence = 202;
+    assert(book.apply(resync_snap).code == DecisionCode::Accepted);
+    complete_snapshot(202);
 
     // Timer-based freshness & staleness check:
     // Update at t = 2,000,000,000 ns

@@ -63,6 +63,7 @@ class LocalWarehouse:
             best_bid_ticks INTEGER,
             best_ask_ticks INTEGER,
             midpoint_ticks INTEGER,
+            midpoint_half_ticks INTEGER,
             spread_ticks INTEGER,
             is_crossed INTEGER,
             is_empty INTEGER,
@@ -103,7 +104,7 @@ class LocalWarehouse:
         calculation_version: str = "v1.0",
         status: str = "VALIDATED"
     ) -> Dict[str, Any]:
-        """Validates file checksums and registers an immutable run manifest."""
+        """Registers one immutable input manifest; duplicate run IDs are errors."""
         import hashlib
         with open(input_file, "rb") as f:
             input_hash = hashlib.sha256(f.read()).hexdigest()
@@ -115,7 +116,7 @@ class LocalWarehouse:
 
         cur = self.conn.cursor()
         cur.execute("""
-        INSERT OR REPLACE INTO run_manifests (
+        INSERT INTO run_manifests (
             run_id, seed, input_hash, fault_manifest_hash, calculation_version, status
         ) VALUES (?, ?, ?, ?, ?, ?)
         """, (run_id, seed, input_hash, fault_hash, calculation_version, status))
@@ -142,7 +143,7 @@ class LocalWarehouse:
                     continue
                 d = json.loads(line)
                 cur.execute("""
-                INSERT OR REPLACE INTO raw_deliveries (
+                INSERT INTO raw_deliveries (
                     run_id, delivery_id, source, source_session, instrument,
                     message_kind, provider_sequence, receive_time_ns, replay_time_ns,
                     side, price_ticks, size_units, payload_hash
@@ -161,7 +162,7 @@ class LocalWarehouse:
                     continue
                 p = json.loads(line)
                 cur.execute("""
-                INSERT OR REPLACE INTO processing_decisions (
+                INSERT INTO processing_decisions (
                     delivery_id, code, reason, decision_time_ns, resulting_book_state
                 ) VALUES (?, ?, ?, ?, ?)
                 """, (
@@ -170,12 +171,18 @@ class LocalWarehouse:
                 ))
                 decisions_count += 1
 
+        cur.execute("""SELECT COUNT(*) FROM processing_decisions p
+            LEFT JOIN raw_deliveries d ON p.delivery_id = d.delivery_id
+            WHERE d.delivery_id IS NULL""")
+        if cur.fetchone()[0] or deliveries_count != decisions_count:
+            self.conn.rollback()
+            raise ValueError("Evidence counts or delivery IDs do not match")
         self.conn.commit()
         return {"deliveries": deliveries_count, "decisions": decisions_count}
 
-    def populate_checkpoints_from_metrics(self, run_id: str, expected_metrics_json_path: str) -> int:
-        """Populates book_checkpoints from canonical replay output."""
-        with open(expected_metrics_json_path, "r") as f:
+    def populate_checkpoints_from_metrics(self, run_id: str, replay_records_json_path: str) -> int:
+        """Populates checkpoints from replay records, checking loaded decisions."""
+        with open(replay_records_json_path, "r") as f:
             records = json.load(f)
 
         cur = self.conn.cursor()
@@ -184,13 +191,18 @@ class LocalWarehouse:
             del_id = item["delivery_id"]
             dec = item["decision"]
             met = item["metrics"]
+            stored = cur.execute("""SELECT p.code, p.resulting_book_state
+                FROM processing_decisions p JOIN raw_deliveries d USING (delivery_id)
+                WHERE d.run_id = ? AND d.delivery_id = ?""", (run_id, del_id)).fetchone()
+            if stored is None or stored["code"] != dec["code"] or stored["resulting_book_state"] != dec["resulting_book_state"]:
+                raise ValueError(f"Checkpoint decision does not match delivery evidence: {del_id}")
 
             cur.execute("""
-            INSERT OR REPLACE INTO book_checkpoints (
+            INSERT INTO book_checkpoints (
                 checkpoint_id, run_id, delivery_id, timestamp_ns,
-                best_bid_ticks, best_ask_ticks, midpoint_ticks, spread_ticks,
-                is_crossed, is_empty, book_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                best_bid_ticks, best_ask_ticks, midpoint_ticks, midpoint_half_ticks,
+                spread_ticks, is_crossed, is_empty, book_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 f"chk_{idx:04d}_{del_id}",
                 run_id,
@@ -199,6 +211,7 @@ class LocalWarehouse:
                 met.get("best_bid_ticks"),
                 met.get("best_ask_ticks"),
                 met.get("midpoint_ticks"),
+                met.get("midpoint_half_ticks"),
                 met.get("spread_ticks"),
                 1 if met.get("is_crossed") else 0,
                 1 if met.get("is_empty") else 0,
@@ -212,16 +225,16 @@ class LocalWarehouse:
     def compute_analytical_results(self, run_id: str) -> int:
         """
         Computes historical analytical results (midpoints, spreads, rolling volatility)
-        and stores them versioned in analytical_results.
+        and stores immutable revision-1 results in analytical_results.
         """
         cur = self.conn.cursor()
         
         # 1. Fetch checkpoints
         cur.execute("""
-        SELECT checkpoint_id, delivery_id, timestamp_ns, midpoint_ticks, spread_ticks, book_state
-        FROM book_checkpoints
-        WHERE run_id = ?
-        ORDER BY timestamp_ns ASC
+        SELECT c.checkpoint_id, c.delivery_id, c.timestamp_ns, c.midpoint_half_ticks,
+               c.spread_ticks, c.book_state, d.message_kind
+        FROM book_checkpoints c JOIN raw_deliveries d ON d.delivery_id = c.delivery_id
+        WHERE c.run_id = ? ORDER BY c.timestamp_ns, c.delivery_id
         """, (run_id,))
         checkpoints = cur.fetchall()
 
@@ -231,39 +244,39 @@ class LocalWarehouse:
         for chk in checkpoints:
             del_id = chk["delivery_id"]
             ts = chk["timestamp_ns"]
-            mid = chk["midpoint_ticks"]
+            mid = chk["midpoint_half_ticks"]
             spr = chk["spread_ticks"]
             state = chk["book_state"]
 
             # Midpoint result
             cur.execute("""
-            INSERT OR REPLACE INTO analytical_results (
+            INSERT INTO analytical_results (
                 result_id, run_id, metric_name, window_start_ns, window_end_ns,
                 revision, status, numeric_value, evidence_deliveries, calculation_version
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 f"res_mid_{del_id}", run_id, "MIDPOINT", ts, ts, 1,
-                state, float(mid) if mid is not None else None,
+                state, mid / 2 if state == "VALID" and mid is not None else None,
                 del_id, "v1.0"
             ))
             results_inserted += 1
 
             # Spread result
             cur.execute("""
-            INSERT OR REPLACE INTO analytical_results (
+            INSERT INTO analytical_results (
                 result_id, run_id, metric_name, window_start_ns, window_end_ns,
                 revision, status, numeric_value, evidence_deliveries, calculation_version
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 f"res_spr_{del_id}", run_id, "SPREAD", ts, ts, 1,
-                state, float(spr) if spr is not None else None,
+                state, float(spr) if state == "VALID" and spr is not None else None,
                 del_id, "v1.0"
             ))
             results_inserted += 1
 
-        # 2. Rolling Volatility over 11 valid observations (10 returns)
-        # Window slides over valid midpoints
-        valid_points = [chk for chk in checkpoints if chk["book_state"] == "VALID" and chk["midpoint_ticks"] is not None]
+        # 2. Controlled fixture samples once per second. Snapshots and timers
+        # are not additional samples; gaps and invalid samples block windows.
+        checkpoints = [chk for chk in checkpoints if chk["message_kind"] == "UPDATE"]
 
         for i in range(len(checkpoints)):
             current_chk = checkpoints[i]
@@ -272,7 +285,7 @@ class LocalWarehouse:
                 # Incomplete initial window
                 window_chk = checkpoints[0 : i + 1]
                 cur.execute("""
-                INSERT OR REPLACE INTO analytical_results (
+                INSERT INTO analytical_results (
                     result_id, run_id, metric_name, window_start_ns, window_end_ns,
                     revision, status, numeric_value, evidence_deliveries, calculation_version
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -286,13 +299,17 @@ class LocalWarehouse:
             else:
                 window_chk = checkpoints[i - 10 : i + 1]
                 # Check if all 11 in this window are VALID
-                any_corrupted = any(c["book_state"] != "VALID" or c["midpoint_ticks"] is None for c in window_chk)
+                any_corrupted = any(c["book_state"] != "VALID" or c["midpoint_half_ticks"] is None for c in window_chk)
+                regular = all(
+                    window_chk[k]["timestamp_ns"] - window_chk[k - 1]["timestamp_ns"] == 1_000_000_000
+                    for k in range(1, len(window_chk))
+                )
                 
-                if any_corrupted:
+                if any_corrupted or not regular:
                     status = "INCOMPLETE"
                     vol = None
                 else:
-                    midpoints = [float(c["midpoint_ticks"]) for c in window_chk]
+                    midpoints = [c["midpoint_half_ticks"] / 2 for c in window_chk]
                     # Calculate sample standard deviation
                     returns = [math.log(midpoints[k] / midpoints[k - 1]) for k in range(1, 11)]
                     mean_r = sum(returns) / 10.0
@@ -301,7 +318,7 @@ class LocalWarehouse:
                     status = "VALID"
 
                 cur.execute("""
-                INSERT OR REPLACE INTO analytical_results (
+                INSERT INTO analytical_results (
                     result_id, run_id, metric_name, window_start_ns, window_end_ns,
                     revision, status, numeric_value, evidence_deliveries, calculation_version
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

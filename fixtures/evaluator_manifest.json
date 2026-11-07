@@ -20,19 +20,19 @@
     "step_index": 35,
     "fault_type": "INVALID_PRICE",
     "expected_decision": "REJECTED_INVALID_PRICE",
-    "expected_book_state": "VALID",
-    "comment": "Nonpositive price ticks; should reject update"
+    "expected_book_state": "INCOMPLETE",
+    "comment": "Nonpositive price consumes a source sequence; stop applying updates until a fresh snapshot"
   },
   {
-    "delivery_id": "del_0061",
+    "delivery_id": "del_0064",
     "step_index": 50,
     "fault_type": "INVALID_SIZE",
     "expected_decision": "REJECTED_INVALID_SIZE",
-    "expected_book_state": "VALID",
-    "comment": "Negative size units; should reject update"
+    "expected_book_state": "INCOMPLETE",
+    "comment": "Negative size consumes a source sequence; stop applying updates until a fresh snapshot"
   },
   {
-    "delivery_id": "del_0069",
+    "delivery_id": "del_0075",
     "step_index": 58,
     "fault_type": "SIMULATED_PAUSE",
     "expected_decision": "ACCEPTED",
@@ -40,7 +40,7 @@
     "comment": "Simulated pause triggers staleness heartbeat check; transitions book to STALE"
   },
   {
-    "delivery_id": "del_0076",
+    "delivery_id": "del_0082",
     "step_index": 65,
     "fault_type": "SEQUENCE_GAP",
     "expected_decision": "REJECTED_OUT_OF_SEQUENCE",
@@ -48,7 +48,7 @@
     "comment": "Observable sequence gap; marks order book state as INCOMPLETE"
   },
   {
-    "delivery_id": "del_0083",
+    "delivery_id": "del_0089",
     "step_index": 72,
     "fault_type": "GRACEFUL_RESTART",
     "expected_decision": "REJECTED_OUT_OF_SEQUENCE",
@@ -56,11 +56,11 @@
     "comment": "Session restart discontinuity; remains INCOMPLETE until authoritative resync"
   },
   {
-    "delivery_id": "del_0091",
+    "delivery_id": "del_0097",
     "step_index": 80,
     "fault_type": "RESYNC_SNAPSHOT",
     "expected_decision": "ACCEPTED",
-    "expected_book_state": "VALID",
-    "comment": "Authoritative resync snapshot; restores current book state to VALID"
+    "expected_book_state": "INCOMPLETE",
+    "comment": "Resync reset starts an incomplete book; subsequent bid and ask levels restore validity"
   }
 ]

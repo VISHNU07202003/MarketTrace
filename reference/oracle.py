@@ -22,7 +22,7 @@ class ReferenceOracle:
 
     def __init__(self, instrument: str = "BTC-USD"):
         self.instrument = instrument
-        self.state = QualityState.VALID
+        self.state = QualityState.INCOMPLETE
         self.bids: Dict[int, int] = {}  # price_ticks -> size_units
         self.asks: Dict[int, int] = {}  # price_ticks -> size_units
         self.last_provider_sequence: Optional[int] = None
@@ -36,7 +36,7 @@ class ReferenceOracle:
     def clear(self):
         self.bids.clear()
         self.asks.clear()
-        self.state = QualityState.VALID
+        self.state = QualityState.INCOMPLETE
         self.last_provider_sequence = None
         self.last_update_time_ns = 0
         self.current_session = None
@@ -61,7 +61,8 @@ class ReferenceOracle:
             dec = self._apply_update(event)
         elif event.message_kind == MessageKind.TIMER:
             elapsed = (event.receive_time_ns - self.last_update_time_ns) if self.last_update_time_ns > 0 else 0
-            if self.last_update_time_ns > 0 and elapsed > self.FRESHNESS_TIMEOUT_NS:
+            if (self.last_update_time_ns > 0 and elapsed > self.FRESHNESS_TIMEOUT_NS
+                    and self.state != QualityState.INCOMPLETE):
                 self.state = QualityState.STALE
                 dec = ProcessingDecision(
                     delivery_id=event.delivery_id,
@@ -96,7 +97,7 @@ class ReferenceOracle:
         if event.side == Side.NONE and event.price_ticks == 0 and event.size_units == 0:
             self.bids.clear()
             self.asks.clear()
-            self.state = QualityState.VALID
+            self.state = QualityState.INCOMPLETE
             if event.provider_sequence is not None:
                 self.last_provider_sequence = event.provider_sequence
             self.last_update_time_ns = event.receive_time_ns
@@ -105,10 +106,11 @@ class ReferenceOracle:
                 code=DecisionCode.ACCEPTED,
                 reason="Snapshot book reset",
                 decision_time_ns=event.receive_time_ns,
-                resulting_book_state=QualityState.VALID
+                resulting_book_state=self.state
             )
 
         if event.price_ticks <= 0:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_INVALID_PRICE,
@@ -118,12 +120,25 @@ class ReferenceOracle:
             )
 
         if event.size_units < 0:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_INVALID_SIZE,
                 reason=f"Snapshot size must be non-negative, got {event.size_units}",
                 decision_time_ns=event.receive_time_ns,
                 resulting_book_state=self.state
+            )
+
+        if (event.side == Side.BID and event.size_units > 0 and self.asks
+                and event.price_ticks >= min(self.asks)) or (
+            event.side == Side.ASK and event.size_units > 0 and self.bids
+                and event.price_ticks <= max(self.bids)
+        ):
+            self.state = QualityState.INCOMPLETE
+            return ProcessingDecision(
+                delivery_id=event.delivery_id, code=DecisionCode.REJECTED_INVALID_PRICE,
+                reason="Snapshot level would cross the book",
+                decision_time_ns=event.receive_time_ns, resulting_book_state=self.state
             )
 
         if event.side == Side.BID:
@@ -137,6 +152,7 @@ class ReferenceOracle:
             else:
                 self.asks[event.price_ticks] = event.size_units
         else:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_UNKNOWN_SIDE,
@@ -147,7 +163,8 @@ class ReferenceOracle:
 
         if event.provider_sequence is not None:
             self.last_provider_sequence = event.provider_sequence
-        self.state = QualityState.VALID
+        self.state = (QualityState.VALID if self.bids and self.asks
+                      else QualityState.INCOMPLETE)
         self.last_update_time_ns = event.receive_time_ns
 
         return ProcessingDecision(
@@ -155,10 +172,16 @@ class ReferenceOracle:
             code=DecisionCode.ACCEPTED,
             reason="Snapshot level applied",
             decision_time_ns=event.receive_time_ns,
-            resulting_book_state=QualityState.VALID
+            resulting_book_state=self.state
         )
 
     def _apply_update(self, event: EventEnvelope) -> ProcessingDecision:
+        if self.state == QualityState.INCOMPLETE:
+            return ProcessingDecision(
+                delivery_id=event.delivery_id, code=DecisionCode.REJECTED_OUT_OF_SEQUENCE,
+                reason="Book is incomplete; authoritative snapshot required",
+                decision_time_ns=event.receive_time_ns, resulting_book_state=self.state
+            )
         # Check sequence
         if event.provider_sequence is not None and self.last_provider_sequence is not None:
             expected = self.last_provider_sequence + 1
@@ -175,7 +198,6 @@ class ReferenceOracle:
 
             if actual > expected:
                 self.state = QualityState.INCOMPLETE
-                self.last_provider_sequence = actual
                 return ProcessingDecision(
                     delivery_id=event.delivery_id,
                     code=DecisionCode.REJECTED_OUT_OF_SEQUENCE,
@@ -184,10 +206,8 @@ class ReferenceOracle:
                     resulting_book_state=QualityState.INCOMPLETE
                 )
 
-        if event.provider_sequence is not None:
-            self.last_provider_sequence = event.provider_sequence
-
         if event.price_ticks <= 0:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_INVALID_PRICE,
@@ -197,12 +217,25 @@ class ReferenceOracle:
             )
 
         if event.size_units < 0:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_INVALID_SIZE,
                 reason=f"Size units cannot be negative, got {event.size_units}",
                 decision_time_ns=event.receive_time_ns,
                 resulting_book_state=self.state
+            )
+
+        if (event.side == Side.BID and event.size_units > 0 and self.asks
+                and event.price_ticks >= min(self.asks)) or (
+            event.side == Side.ASK and event.size_units > 0 and self.bids
+                and event.price_ticks <= max(self.bids)
+        ):
+            self.state = QualityState.INCOMPLETE
+            return ProcessingDecision(
+                delivery_id=event.delivery_id, code=DecisionCode.REJECTED_INVALID_PRICE,
+                reason="Update would cross the book",
+                decision_time_ns=event.receive_time_ns, resulting_book_state=self.state
             )
 
         if event.side == Side.BID:
@@ -216,6 +249,7 @@ class ReferenceOracle:
             else:
                 self.asks[event.price_ticks] = event.size_units
         else:
+            self.state = QualityState.INCOMPLETE
             return ProcessingDecision(
                 delivery_id=event.delivery_id,
                 code=DecisionCode.REJECTED_UNKNOWN_SIDE,
@@ -224,9 +258,13 @@ class ReferenceOracle:
                 resulting_book_state=self.state
             )
 
+        if event.provider_sequence is not None:
+            self.last_provider_sequence = event.provider_sequence
         if self.state == QualityState.STALE:
             self.state = QualityState.VALID
         self.last_update_time_ns = event.receive_time_ns
+        if not self.bids or not self.asks:
+            self.state = QualityState.INCOMPLETE
 
         return ProcessingDecision(
             delivery_id=event.delivery_id,
@@ -252,13 +290,15 @@ class ReferenceOracle:
 
         is_crossed = best_bid >= best_ask
         spread = best_ask - best_bid
-        midpoint = (best_bid + best_ask) // 2
+        midpoint = (best_bid + best_ask) // 2 if self.state == QualityState.VALID and not is_crossed else None
+        half_ticks = best_bid + best_ask if midpoint is not None else None
 
         return BookMetrics(
             best_bid_ticks=best_bid,
             best_ask_ticks=best_ask,
             midpoint_ticks=midpoint,
-            spread_ticks=spread,
+            midpoint_half_ticks=half_ticks,
+            spread_ticks=spread if midpoint is not None else None,
             is_crossed=is_crossed,
             is_empty=False
         )

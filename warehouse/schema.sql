@@ -1,5 +1,6 @@
 -- MarketTrace Versioned Relational Schema
--- Compatible with Snowflake DDL and SQLite local offline runner
+-- UNVERIFIED DESIGN DRAFT: not run against Snowflake. The SQLite implementation
+-- is separate Python DDL in local_warehouse.py; this file does not prove parity.
 
 CREATE TABLE IF NOT EXISTS run_manifests (
     run_id VARCHAR(64) PRIMARY KEY,
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS book_checkpoints (
     best_bid_ticks BIGINT,
     best_ask_ticks BIGINT,
     midpoint_ticks BIGINT,
+    midpoint_half_ticks BIGINT,
     spread_ticks BIGINT,
     is_crossed BOOLEAN,
     is_empty BOOLEAN,

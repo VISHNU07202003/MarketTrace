@@ -69,7 +69,7 @@ class FixtureGenerator:
 
         # 2. Initial Snapshot Book Levels (5 bids, 5 asks)
         base_bid = 6_000_000  # $60,000.00
-        base_ask = 6_000_500  # $60,005.00
+        base_ask = 6_001_000  # $60,010.00; random updates cannot cross best bid
         tick_step = 100       # $1.00 step
 
         for i in range(5):
@@ -170,8 +170,8 @@ class FixtureGenerator:
                     "step_index": step,
                     "fault_type": fault_type,
                     "expected_decision": DecisionCode.REJECTED_INVALID_PRICE.value,
-                    "expected_book_state": QualityState.VALID.value,
-                    "comment": "Nonpositive price ticks; should reject update"
+                    "expected_book_state": QualityState.INCOMPLETE.value,
+                    "comment": "Nonpositive price consumes a source sequence; stop applying updates until a fresh snapshot"
                 })
 
             elif fault_type == "INVALID_SIZE":
@@ -183,8 +183,8 @@ class FixtureGenerator:
                     "step_index": step,
                     "fault_type": fault_type,
                     "expected_decision": DecisionCode.REJECTED_INVALID_SIZE.value,
-                    "expected_book_state": QualityState.VALID.value,
-                    "comment": "Negative size units; should reject update"
+                    "expected_book_state": QualityState.INCOMPLETE.value,
+                    "comment": "Negative size consumes a source sequence; stop applying updates until a fresh snapshot"
                 })
 
             elif fault_type == "SIMULATED_PAUSE":
@@ -240,8 +240,8 @@ class FixtureGenerator:
                     "step_index": step,
                     "fault_type": fault_type,
                     "expected_decision": DecisionCode.ACCEPTED.value,
-                    "expected_book_state": QualityState.VALID.value,
-                    "comment": "Authoritative resync snapshot; restores current book state to VALID"
+                    "expected_book_state": QualityState.INCOMPLETE.value,
+                    "comment": "Resync reset starts an incomplete book; subsequent bid and ask levels restore validity"
                 })
 
             else:
@@ -264,6 +264,34 @@ class FixtureGenerator:
                 payload_hash=hashlib.sha256(f"update_{step}_{del_id}".encode()).hexdigest()[:16]
             )
             events.append(event)
+
+            # A rejected sequenced update leaves the book uncertain. Give each
+            # independent validation scenario its own authoritative synthetic
+            # resync so later fault categories can still be exercised.
+            if fault_type in {"INVALID_PRICE", "INVALID_SIZE"}:
+                for side_, price_, size_ in (
+                    (Side.NONE, 0, 0),
+                    (Side.BID, base_bid, 100_000_000),
+                    (Side.ASK, base_ask, 100_000_000),
+                ):
+                    current_time_ns += 1_000_000
+                    events.append(EventEnvelope(
+                        run_id=run_id,
+                        delivery_id=next_delivery_id(),
+                        source="synthetic_fixture",
+                        source_session=session_id,
+                        instrument=self.instrument,
+                        message_kind=MessageKind.SNAPSHOT,
+                        provider_sequence=curr_seq,
+                        receive_time_ns=current_time_ns,
+                        replay_time_ns=current_time_ns,
+                        side=side_,
+                        price_ticks=price_,
+                        size_units=size_,
+                        payload_hash=hashlib.sha256(
+                            f"resync_after_{fault_type}_{side_.value}".encode()
+                        ).hexdigest()[:16],
+                    ))
 
             # If resync snapshot, also inject fresh baseline quotes so book is populated immediately
             if fault_type == "RESYNC_SNAPSHOT":

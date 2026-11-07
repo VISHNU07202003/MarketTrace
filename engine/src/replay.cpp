@@ -117,6 +117,11 @@ void ReplayEngine::export_records_to_json(const std::vector<ReplayRecord>& recor
         } else {
             met_obj["midpoint_ticks"] = nullptr;
         }
+        if (r.metrics.midpoint_half_ticks.has_value()) {
+            met_obj["midpoint_half_ticks"] = *r.metrics.midpoint_half_ticks;
+        } else {
+            met_obj["midpoint_half_ticks"] = nullptr;
+        }
 
         if (r.metrics.spread_ticks.has_value()) {
             met_obj["spread_ticks"] = *r.metrics.spread_ticks;
@@ -265,6 +270,18 @@ bool ReplayEngine::verify_parity_with_reference(
         }
 
         const auto& exp_met = exp["metrics"];
+        if (exp_met.contains("midpoint_half_ticks")) {
+            if (exp_met["midpoint_half_ticks"].is_null()) {
+                if (act.metrics.midpoint_half_ticks.has_value()) {
+                    failure_reason = "Unexpected exact midpoint at " + act.delivery_id;
+                    return false;
+                }
+            } else if (!act.metrics.midpoint_half_ticks.has_value() ||
+                       *act.metrics.midpoint_half_ticks != exp_met["midpoint_half_ticks"].get<int64_t>()) {
+                failure_reason = "Exact half-tick midpoint mismatch at " + act.delivery_id;
+                return false;
+            }
+        }
         // Check best bid
         if (exp_met["best_bid_ticks"].is_null()) {
             if (act.metrics.best_bid_ticks.has_value()) {

@@ -3,6 +3,7 @@
 #include "markettrace/replay.hpp"
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 int main(int argc, char* argv[]) {
     std::cout << "==========================================================" << std::endl;
@@ -23,6 +24,16 @@ int main(int argc, char* argv[]) {
         markettrace::ReplayEngine engine("BTC-USD");
         auto records = engine.replay(events);
         std::cout << "[INFO] Replay completed. Generated " << records.size() << " records." << std::endl;
+
+        if (argc == 4 && std::string(argv[2]) == "--output") {
+            const std::filesystem::path output(argv[3]);
+            if (output.has_parent_path()) std::filesystem::create_directories(output.parent_path());
+            markettrace::ReplayEngine::export_records_to_json(records, output.string());
+            std::cout << "[OUTPUT] Wrote engine decisions and checkpoints: " << output << std::endl;
+        } else if (argc > 2) {
+            std::cerr << "Usage: markettrace_cli [fixture.json] [--output result.json]" << std::endl;
+            return 2;
+        }
 
         size_t accepted = 0;
         size_t rejected = 0;

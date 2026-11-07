@@ -1,5 +1,6 @@
--- MarketTrace Bounded Snowflake Staging and Ingestion Script
--- Enforces budget ceiling and resource monitor discipline
+-- UNVERIFIED SNOWFLAKE DESIGN DRAFT. Do not execute as a ready deployment.
+-- No Python cloud loader, cost guard, tested permissions, or bounded run exists.
+-- A resource monitor and warehouse settings alone cannot prove a dollar cap.
 
 -- 1. Create Resource Monitor with strict credit limit (Max $400 trial budget ceiling)
 CREATE OR REPLACE RESOURCE MONITOR markettrace_monitor

@@ -14,8 +14,8 @@
     </div>
     <div class="header-badges">
       <span class="badge badge-synthetic" id="badge-data">SYNTHETIC FIXTURE</span>
-      <span class="badge badge-engine">C++20 REPLAY CORE</span>
-      <span class="badge badge-parity">PARITY: 100% VERIFIED</span>
+      <span class="badge badge-engine" id="badge-source">LOADING SOURCE</span>
+      <span class="badge badge-synthetic">SNOWFLAKE NOT VERIFIED</span>
     </div>
   </header>
 
@@ -39,8 +39,9 @@
         <div class="controls">
           <label for="run-select">Dataset:</label>
           <select id="run-select" onchange="loadRunOverview(this.value)">
-            <option value="faulted" selected>Faulted Incident Run (s42)</option>
-            <option value="clean">Clean Reference Run (s42)</option>
+            <option value="damaged" selected>Damaged incident (missing event)</option>
+            <option value="clean">Complete reference branch</option>
+            <option value="repaired">Controlled repaired branch</option>
           </select>
         </div>
       </div>
@@ -79,10 +80,9 @@
       <div class="info-card">
         <h3>Architecture & Data Provenance</h3>
         <p>
-          This dashboard presents an offline, credential-free execution of the MarketTrace BTC-USD replay pipeline.
-          The immediate order book is maintained in <strong>C++20</strong>, producing bit-for-bit parity with the 
-          <strong>Python Reference Oracle</strong>. Historical evidence is ingested into a versioned relational schema 
-          and analyzed via the <strong>DepGraph</strong> temporal dependency registry.
+          This is a synthetic, credential-free incident study. The source badge shows whether these
+          records came from the C++ replay or the Python reference fixture. Local historical
+          calculations use SQLite. No Snowflake run or live market-data capture has been verified.
         </p>
       </div>
     </section>
@@ -126,9 +126,9 @@
           <em>current</em> book state, but does <em>not</em> heal historical calculation windows.
         </p>
         <p>
-          <strong>2. Targeted Recomputation:</strong> In a controlled replay where the withheld historical event is restored, 
-          <strong>DepGraph</strong> plans recomputation <em>only</em> for the affected downstream windows (producing <strong>Revision 2</strong>), 
-          while completely preserving unaffected prior results in <strong>Revision 1</strong>.
+          <strong>2. Controlled replay:</strong> The withheld synthetic event is retained and inserted back
+          into its original order in a separate branch. This table compares recalculated windows with the
+          damaged branch. Persistent revision 2 storage is not implemented yet.
         </p>
       </div>
 
@@ -136,11 +136,11 @@
         <table class="comparison-table">
           <thead>
             <tr>
-              <th>Delivery ID</th>
-              <th>Clean Oracle</th>
+              <th>Window end</th>
+              <th>Clean volatility</th>
               <th>Damaged State</th>
-              <th>Recovered State</th>
-              <th>Revision</th>
+              <th>Controlled Replay</th>
+              <th>Window (ns)</th>
               <th>Affected?</th>
               <th>Explanation</th>
             </tr>

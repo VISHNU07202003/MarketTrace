@@ -24,16 +24,20 @@ class ImpactAnalyzer:
           collects 10 preceding log_returns -> rolling_volatility window.
         """
         self.delivery_records = delivery_records
+        self.graph = DependencyGraph()
         g = self.graph
 
         prev_midpoint_id: Optional[str] = None
-        returns_history: List[Tuple[str, int, int]] = []  # (node_id, timestamp_ns, del_id)
+        prev_ts: Optional[int] = None
+        prev_quality = QualityState.INCOMPLETE
+        prev_evidence: Set[str] = set()
+        returns_history: List[Tuple[str, int, int]] = []  # node, start timestamp, end timestamp
 
         for idx, rec in enumerate(delivery_records):
             del_id = rec["delivery_id"]
             ts = rec.get("timestamp_ns", idx * 100_000_000)
             dec_code = rec.get("decision_code", "ACCEPTED")
-            initial_state = QualityState.VALID if dec_code == "ACCEPTED" else QualityState.INCOMPLETE
+            initial_state = QualityState(rec.get("book_state", "VALID" if dec_code == "ACCEPTED" else "INCOMPLETE"))
 
             # 1. Raw Delivery Node
             raw_id = f"raw_{del_id}"
@@ -88,35 +92,43 @@ class ImpactAnalyzer:
 
             # 5. Log Returns Node (requires current midpoint and preceding midpoint)
             ret_id = f"ret_{del_id}"
-            if prev_midpoint_id is not None:
+            if rec.get("message_kind", "UPDATE") == "UPDATE" and prev_midpoint_id is not None:
+                valid_return = (initial_state == QualityState.VALID and
+                                prev_quality == QualityState.VALID and
+                                ts - prev_ts == 1_000_000_000)
                 g.add_node(DependencyNode(
                     node_id=ret_id,
                     kind=NodeKind.LOG_RETURNS,
                     instrument=self.instrument,
-                    time_window=(ts - 100_000_000, ts),
-                    quality_state=initial_state,
-                    evidence_delivery_ids={del_id},
+                    time_window=(prev_ts, ts),
+                    quality_state=QualityState.VALID if valid_return else QualityState.INCOMPLETE,
+                    evidence_delivery_ids=prev_evidence | {del_id},
                     explanation=f"Log return between {prev_midpoint_id} and {mid_id}"
                 ))
                 g.add_edge(prev_midpoint_id, ret_id)
                 g.add_edge(mid_id, ret_id)
-                returns_history.append((ret_id, ts, del_id))
-            prev_midpoint_id = mid_id
+                returns_history.append((ret_id, prev_ts, ts))
+            if rec.get("message_kind", "UPDATE") == "UPDATE":
+                prev_midpoint_id = mid_id
+                prev_ts = ts
+                prev_quality = initial_state
+                prev_evidence = {del_id}
 
             # 6. Rolling Volatility Node (requires 10 consecutive log returns)
             vol_id = f"vol_{del_id}"
-            if len(returns_history) >= 10:
+            if rec.get("message_kind", "UPDATE") == "UPDATE" and len(returns_history) >= 10:
                 window_returns = returns_history[-10:]
                 start_window_ts = window_returns[0][1]
-                end_window_ts = window_returns[-1][1]
-                window_evidence = {r[2] for r in window_returns}
+                end_window_ts = window_returns[-1][2]
+                window_evidence = set().union(*(g.nodes[r[0]].evidence_delivery_ids for r in window_returns))
+                valid_window = all(g.nodes[r[0]].quality_state == QualityState.VALID for r in window_returns)
 
                 g.add_node(DependencyNode(
                     node_id=vol_id,
                     kind=NodeKind.ROLLING_VOLATILITY,
                     instrument=self.instrument,
                     time_window=(start_window_ts, end_window_ts),
-                    quality_state=QualityState.VALID,
+                    quality_state=QualityState.VALID if valid_window else QualityState.INCOMPLETE,
                     evidence_delivery_ids=window_evidence,
                     explanation=f"10-period rolling volatility ending at {del_id}"
                 ))
@@ -156,6 +168,12 @@ class ImpactAnalyzer:
         - Restores current book and subsequent quotes to VALID.
         - DOES NOT heal historical windows that required missing historical deliveries.
         """
+        source = next((rec for rec in self.delivery_records
+                       if rec["delivery_id"] == resync_delivery_id), None)
+        if (source is None or source.get("message_kind") != "SNAPSHOT" or
+                source.get("book_state") != "VALID" or
+                source.get("decision_code") != "ACCEPTED"):
+            raise ValueError("Resync requires an accepted complete valid snapshot")
         book_id = f"book_{resync_delivery_id}"
         if book_id in self.graph.nodes:
             self.graph.nodes[book_id].quality_state = QualityState.VALID
@@ -187,11 +205,5 @@ class ImpactAnalyzer:
         full_order = self.graph.get_topological_sort()
         plan = [nid for nid in full_order if nid in recompute_nodes]
 
-        # Apply recomputation: bump revision to 2 and restore VALID state
-        for nid in plan:
-            node = self.graph.nodes[nid]
-            node.quality_state = QualityState.VALID
-            node.revision += 1
-            node.explanation = f"Selectively recomputed in revision {node.revision} with restored evidence"
-
+        # A plan alone cannot certify new values or create a persisted revision.
         return plan

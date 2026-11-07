@@ -1,5 +1,4 @@
--- MarketTrace Teardown and Resource Protection Script
--- Ensures zero idle credit consumption
+-- UNVERIFIED DESIGN DRAFT; not a tested cleanup or zero-cost guarantee.
 
 USE WAREHOUSE markettrace_wh;
 

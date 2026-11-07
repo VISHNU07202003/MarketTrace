@@ -70,6 +70,7 @@ class BookMetrics(BaseModel):
     best_bid_ticks: Optional[int] = None
     best_ask_ticks: Optional[int] = None
     midpoint_ticks: Optional[int] = None
+    midpoint_half_ticks: Optional[int] = None  # exact midpoint in half-tick units
     spread_ticks: Optional[int] = None
     is_crossed: bool = False
     is_empty: bool = True

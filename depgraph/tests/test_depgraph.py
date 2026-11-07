@@ -35,7 +35,9 @@ def test_impact_analysis_and_unaffected_set():
         records.append({
             "delivery_id": f"del_{i:04d}",
             "timestamp_ns": i * 100_000_000,
-            "decision_code": "ACCEPTED"
+            "decision_code": "ACCEPTED",
+            "message_kind": "SNAPSHOT" if i == 25 else "UPDATE",
+            "book_state": "VALID",
         })
 
     analyzer.build_graph_from_records(records)
@@ -64,7 +66,9 @@ def test_honest_recovery_and_controlled_recomputation():
         records.append({
             "delivery_id": f"del_{i:04d}",
             "timestamp_ns": i * 100_000_000,
-            "decision_code": "ACCEPTED"
+            "decision_code": "ACCEPTED",
+            "message_kind": "SNAPSHOT" if i == 25 else "UPDATE",
+            "book_state": "VALID",
         })
 
     analyzer.build_graph_from_records(records)
@@ -79,6 +83,8 @@ def test_honest_recovery_and_controlled_recomputation():
         assert analyzer.graph.nodes[v].quality_state == QualityState.INCOMPLETE
 
     # 1. Honest Recovery via fresh snapshot at del_0025
+    with pytest.raises(ValueError, match="complete valid snapshot"):
+        analyzer.apply_resync_snapshot("del_0015")
     analyzer.apply_resync_snapshot("del_0025")
     # Current book at del_0025 is now VALID
     assert analyzer.graph.nodes["book_del_0025"].quality_state == QualityState.VALID
@@ -94,11 +100,11 @@ def test_honest_recovery_and_controlled_recomputation():
     assert len(plan) > 0
     assert "book_del_0015" in plan
 
-    # After controlled recomputation:
-    # All recomputed nodes transition to VALID and revision 2
+    # Planning does not invent computed values or persisted revision 2 rows.
     for nid in plan:
-        assert analyzer.graph.nodes[nid].quality_state == QualityState.VALID
-        assert analyzer.graph.nodes[nid].revision == 2
+        assert analyzer.graph.nodes[nid].revision == 1
+    assert analyzer.graph.nodes["book_del_0015"].quality_state == QualityState.INCOMPLETE
+    assert analyzer.graph.nodes["vol_del_0015"].quality_state == QualityState.INCOMPLETE
 
     # Unaffected prior nodes remain at revision 1
     assert analyzer.graph.nodes["book_del_0005"].revision == 1
