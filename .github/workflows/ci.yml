@@ -28,14 +28,9 @@ jobs:
       run: |
         python -m pytest
 
-    - name: Set up C++ Build Environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y g++-11 cmake
-
     - name: Build C++ Replay Engine
       run: |
-        cmake -B build -DCMAKE_CXX_COMPILER=g++-11
+        cmake -B build
         cmake --build build
 
     - name: Run C++ Engine Tests

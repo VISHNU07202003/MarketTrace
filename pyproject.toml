@@ -23,6 +23,10 @@ warehouse = [
     "snowflake-connector-python>=3.0.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*", "depgraph*", "reference*", "warehouse*"]
+exclude = ["build*", "runs*", "engine*", "fixtures*", "docs*", "2.0*"]
+
 [tool.pytest.ini_options]
 testpaths = ["reference/tests", "depgraph/tests", "warehouse/tests", "app/tests"]
 python_files = ["test_*.py"]
